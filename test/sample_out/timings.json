@@ -1,9 +1,9 @@
 {
-  "extract": 0.339,
-  "pose": 37.362,
-  "align": 0.832,
-  "panos": 111.815,
-  "depth_proxy": 2.388,
-  "nav": 0.141,
-  "export": 0.319
+  "extract": 0.002,
+  "pose": 72.522,
+  "align": 1.031,
+  "panos": 69.124,
+  "depth_proxy": 2.042,
+  "nav": 0.268,
+  "export": 0.186
 }

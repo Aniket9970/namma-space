@@ -69,3 +69,4 @@ photoreal_splat:
   iterations: 7000
   data_device: "cpu"             # Prevents Windows GPU VRAM paging freeze
   resolution_scale: 2            # Downsample images 2x for training stability
+

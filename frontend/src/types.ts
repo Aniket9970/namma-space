@@ -70,3 +70,4 @@ export interface POIItem {
 }
 
 export type ViewerMode = 'photosphere' | 'freeroam' | 'dollhouse' | 'splat';
+

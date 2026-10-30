@@ -376,3 +376,4 @@ def render_nav_debug(
     plt.savefig(str(out_png), dpi=150, facecolor=fig.get_facecolor())
     plt.close()
     print(f"[OK] NavGrid debug render saved -> {out_png}")
+

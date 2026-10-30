@@ -122,3 +122,4 @@ This document provides a step-by-step interactive demonstration script for the c
 | **Minimap & Guidance** | PASS | Rotating compass arrow, active path overlay, Auto-walk animation. |
 | **Zero-Install** | PASS | Runs in browser (Chrome / Edge / Firefox / Safari); WebGL & WebXR ready. |
 | **License Compliance** | PASS | Permissive open-source stack (MIT, BSD-3, Apache 2.0); NC models isolated. |
+

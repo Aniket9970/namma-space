@@ -36,3 +36,4 @@ export default function ProxyMeshView({ url, mode = 'dollhouse' }) {
 
   return <primitive object={preparedScene} />
 }
+

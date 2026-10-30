@@ -9,9 +9,9 @@
       "room 1"
     ],
     "position": [
-      2.843,
       0.0,
-      -3.226
+      0.0,
+      0.0
     ],
     "node_id": "n000",
     "source": "manual"
@@ -26,9 +26,9 @@
       "room 2"
     ],
     "position": [
-      0.732,
+      0.231,
       0.0,
-      -1.631
+      -2.922
     ],
     "node_id": "n001",
     "source": "manual"
@@ -43,45 +43,11 @@
       "room 3"
     ],
     "position": [
-      -0.496,
+      -0.073,
       0.0,
-      0.148
+      -0.604
     ],
     "node_id": "n002",
-    "source": "manual"
-  },
-  {
-    "id": "poi_n003",
-    "name": "Node N003",
-    "category": "Navigation",
-    "aliases": [
-      "node n003",
-      "spot 4",
-      "room 4"
-    ],
-    "position": [
-      -0.535,
-      0.0,
-      0.189
-    ],
-    "node_id": "n003",
-    "source": "manual"
-  },
-  {
-    "id": "poi_n004",
-    "name": "Node N004",
-    "category": "Navigation",
-    "aliases": [
-      "node n004",
-      "spot 5",
-      "room 5"
-    ],
-    "position": [
-      -0.487,
-      0.0,
-      1.357
-    ],
-    "node_id": "n004",
     "source": "manual"
   }
 ]
