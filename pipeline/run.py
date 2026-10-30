@@ -82,6 +82,7 @@ def main():
     parser.add_argument("--skip-splat", action="store_true", help="Skip optional 3DGS photoreal training")
     parser.add_argument("--pose-backend", choices=["colmap", "vggt", "auto"], help="Override pose backend (colmap, vggt, auto)")
     parser.add_argument("--metric-reference", type=float, help="Optional metric dimension reference in metres (e.g. 2.0 for door)")
+    parser.add_argument("--rotation", type=int, choices=[0, 90, 180, 270], help="Rotate video frames clockwise (0, 90, 180, 270)")
     parser.add_argument("--dry-run", action="store_true", help="Print execution plan and cache status without running")
     args = parser.parse_args()
 
@@ -109,6 +110,8 @@ def main():
         config.pose_backend.backend = args.pose_backend
     if args.metric_reference is not None:
         config.general.reference_dimension_m = args.metric_reference
+    if args.rotation is not None:
+        config.frame_sampling.rotation = args.rotation
 
     all_stages = get_default_stages()
     stage_map = {s.name: s for s in all_stages}

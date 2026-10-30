@@ -26,6 +26,7 @@ class FrameSamplingConfig:
     blur_threshold: float = 15.0
     quality: int = 95
     max_dimension: int = 1920
+    rotation: int = 0  # 0, 90, 180, 270 degrees clockwise
 
 
 @dataclass

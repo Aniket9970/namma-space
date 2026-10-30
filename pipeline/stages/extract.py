@@ -70,11 +70,31 @@ class ExtractStage(BaseStage):
         target_fps = config.frame_sampling.fps
         blur_thresh = config.frame_sampling.blur_threshold
         quality = config.frame_sampling.quality
+        rotation = getattr(config.frame_sampling, "rotation", 0)
+        max_dim = getattr(config.frame_sampling, "max_dimension", 1920)
         frame_interval = max(1, int(round(video_fps / target_fps)))
+
+        def process_frame(f):
+            if rotation == 90:
+                f = cv2.rotate(f, cv2.ROTATE_90_CLOCKWISE)
+            elif rotation == 180:
+                f = cv2.rotate(f, cv2.ROTATE_180)
+            elif rotation == 270:
+                f = cv2.rotate(f, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            if max_dim > 0:
+                h, w = f.shape[:2]
+                if max(h, w) > max_dim:
+                    scale = max_dim / float(max(h, w))
+                    f = cv2.resize(f, (int(round(w * scale)), int(round(h * scale))), interpolation=cv2.INTER_AREA)
+            return f
 
         print(f"[INFO] Video: {input_path}")
         print(f"[INFO] Native FPS: {video_fps:.2f}, Total frames: {total_frames}")
         print(f"[INFO] Sampling target: {target_fps} FPS (1 frame every {frame_interval} source frames)")
+        if rotation != 0:
+            print(f"[INFO] Applying video frame rotation: {rotation}° clockwise")
+        if max_dim > 0:
+            print(f"[INFO] Maximum dimension clamp: {max_dim}px")
 
         saved = 0
         frame_idx = 0
@@ -84,6 +104,7 @@ class ExtractStage(BaseStage):
                 if not ret:
                     break
                 if frame_idx % frame_interval == 0:
+                    frame = process_frame(frame)
                     if not is_blurry(frame, blur_thresh):
                         filename = frames_dir / f"frame_{saved:06d}.jpg"
                         cv2.imwrite(str(filename), frame, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
@@ -102,6 +123,7 @@ class ExtractStage(BaseStage):
                 if not ret:
                     break
                 if frame_idx % frame_interval == 0:
+                    frame = process_frame(frame)
                     filename = frames_dir / f"frame_{saved:06d}.jpg"
                     cv2.imwrite(str(filename), frame, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
                     saved += 1
