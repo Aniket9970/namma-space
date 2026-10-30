@@ -149,3 +149,4 @@ def load_config(config_path: Optional[Path | str] = None) -> PipelineConfig:
         raw_dict=raw,
     )
     return cfg
+

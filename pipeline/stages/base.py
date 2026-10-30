@@ -70,3 +70,4 @@ class BaseStage(ABC):
                 timings = {}
         timings[self.name] = round(elapsed, 3)
         timings_path.write_text(json.dumps(timings, indent=2), encoding="utf-8")
+

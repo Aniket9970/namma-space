@@ -1,0 +1,22 @@
+{
+  "COLMAP": {
+    "success": true,
+    "runtime_s": 32.32,
+    "registered_frames": 30,
+    "total_frames": 30,
+    "registration_rate_pct": 100.0,
+    "reprojection_error_px": 1.161,
+    "sparse_points": 5314,
+    "scale_method": "reference"
+  },
+  "VGGT": {
+    "success": true,
+    "runtime_s": 68.87,
+    "registered_frames": 30,
+    "total_frames": 30,
+    "registration_rate_pct": 100.0,
+    "reprojection_error_px": 0.354,
+    "sparse_points": 10313,
+    "scale_method": "reference"
+  }
+}

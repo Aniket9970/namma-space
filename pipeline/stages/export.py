@@ -150,3 +150,4 @@ class ExportStage(BaseStage):
         context["tour_manifest"] = tour_manifest
         context["pois"] = pois
         return context
+

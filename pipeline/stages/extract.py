@@ -112,3 +112,4 @@ class ExtractStage(BaseStage):
         context["frames_dir"] = frames_dir
         context["frame_count"] = saved
         return context
+

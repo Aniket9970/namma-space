@@ -120,3 +120,4 @@ class SplatStage(BaseStage):
             print(f"[WARN] 3DGS training exited with code {res.returncode}")
 
         return context
+

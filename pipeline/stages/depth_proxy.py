@@ -139,3 +139,4 @@ class DepthProxyStage(BaseStage):
         context["proxy_glb"] = proxy_glb
         context["proxy_mesh"] = proxy
         return context
+

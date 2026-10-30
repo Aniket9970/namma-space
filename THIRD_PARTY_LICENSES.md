@@ -39,7 +39,7 @@ In compliance with Competition Rule 4, all third-party libraries, frameworks, pr
 | Model / Library | Stated License | Commercial Use | Competition Assessment & Fallback Strategy |
 |---|---|---|---|
 | **Inria 3D Gaussian Splatting** | Non-Commercial Research License | **RESTRICTED** | Used ONLY for the optional "Photoreal" viewer tab. **Never required for core navigation, proxy mesh, or photosphere tour.** |
-| **VGGT** (Visual Geometry Grounded Transformer) | Apache 2.0 / CC-BY-NC (depending on weights) | **FLAGGED** | Wrapped behind `PoseBackend` abstract interface. Default pipeline uses standard BSD-3 COLMAP with VGGT as experimental feed-forward option. |
+| **VGGT** (Visual Geometry Grounded Transformer, Meta / Oxford) | Meta Research License (v1, July 2025) / Non-Commercial Checkpoint | **FLAGGED (NON-COMMERCIAL CHECKPOINT)** | Core code under Meta Research License. Default checkpoint `facebook/VGGT-1B` is non-commercial/academic only; `facebook/VGGT-1B-Commercial` requires application. **Strictly isolated behind `PoseBackend` interface; pipeline defaults/falls back to BSD-3 COLMAP.** |
 | **Depth Anything V2** | Apache 2.0 | Permitted | Metric/relative monocular depth. Base model weights under Apache 2.0. |
 | **DA360 / Depth Any Panoramas** | Apache 2.0 / MIT | Permitted | Panorama-native depth estimation wrapped behind `PanoDepth` interface. |
 | **three-pathfinding** | MIT | Permitted | Browser navmesh traversal and `clampStep` constrained free-roaming. |
@@ -50,3 +50,4 @@ In compliance with Competition Rule 4, all third-party libraries, frameworks, pr
 ## 4. Verification Policy
 - Any component under a non-commercial (NC) license must be marked as an optional experimental plugin or replaced with an Apache 2.0 / BSD / MIT alternative for competition production deliverables.
 - Core deliverables (Pano nodes, proxy mesh, navmesh, A* planner, zero-install web viewer) rely strictly on permissive open-source licenses (MIT, BSD-3, Apache 2.0).
+

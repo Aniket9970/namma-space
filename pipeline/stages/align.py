@@ -8,8 +8,9 @@ Transforms all camera poses and landmark points into the canonical metric frame.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 import numpy as np
+from scipy.spatial.transform import Rotation
 import trimesh
 
 from .base import BaseStage
@@ -46,7 +47,6 @@ def fit_plane_ransac(points: np.ndarray, dist_threshold: float = 0.05, max_iters
 
     normal = best_plane[:3]
     d = float(best_plane[3])
-    # Ensure normal points upwards relative to camera centroid
     return normal, d, best_inliers
 
 
@@ -57,11 +57,9 @@ def compute_rotation_matrix_to_y(normal: np.ndarray) -> np.ndarray:
     s = np.linalg.norm(v)
     c = np.dot(normal, target)
     if s < 1e-6:
-        # Already aligned or antiparallel
         if c > 0:
             return np.eye(3)
         else:
-            # 180 flip around X
             return np.diag([1.0, -1.0, -1.0])
     vx = np.array([
         [0.0, -v[2], v[1]],
@@ -70,6 +68,29 @@ def compute_rotation_matrix_to_y(normal: np.ndarray) -> np.ndarray:
     ])
     R = np.eye(3) + vx + (vx @ vx) * ((1.0 - c) / (s * s))
     return R
+
+
+def write_points_ply(points: List[Dict[str, Any]], out_path: Path):
+    """Export points to ASCII PLY."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    header = [
+        "ply",
+        "format ascii 1.0",
+        f"element vertex {len(points)}",
+        "property float x",
+        "property float y",
+        "property float z",
+        "property uchar red",
+        "property uchar green",
+        "property uchar blue",
+        "end_header\n",
+    ]
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(header))
+        for pt in points:
+            x, y, z = pt["xyz"]
+            r, g, b = pt.get("rgb", [180, 180, 180])
+            f.write(f"{x:.4f} {y:.4f} {z:.4f} {r} {g} {b}\n")
 
 
 class AlignStage(BaseStage):
@@ -96,21 +117,23 @@ class AlignStage(BaseStage):
 
         poses_data = json.loads(poses_path.read_text(encoding="utf-8"))
         frames = poses_data.get("frames", [])
+        sparse_points = poses_data.get("sparse_points", [])
 
         # Load 3D sparse points
-        best_sparse = context.get("best_sparse", out_dir / "colmap" / "sparse" / "0")
-        ply_candidates = list(out_dir.rglob("points3D.ply"))
         points = None
-        if ply_candidates:
-            mesh = trimesh.load(str(ply_candidates[0]))
-            points = np.asarray(mesh.vertices)
+        if sparse_points and len(sparse_points) > 0:
+            points = np.array([p["xyz"] for p in sparse_points])
+        else:
+            ply_candidates = list(out_dir.rglob("points3D.ply"))
+            if ply_candidates:
+                mesh = trimesh.load(str(ply_candidates[0]))
+                points = np.asarray(mesh.vertices)
 
         if points is None or len(points) == 0:
-            # Fallback to camera centers
             positions = np.array([f["position"] for f in frames])
             points = positions
 
-        # Focus RANSAC on the bottom 40% height of points (likely floor region)
+        # Focus RANSAC on the bottom fraction of height (floor region)
         y_vals = points[:, 1]
         y_thresh = np.percentile(y_vals, config.floor_alignment.search_height_fraction * 100)
         floor_candidates = points[y_vals <= y_thresh]
@@ -123,7 +146,7 @@ class AlignStage(BaseStage):
             max_iters=config.floor_alignment.max_iterations,
         )
 
-        # Ensure normal points toward the scene interior (+Y)
+        # Ensure normal points toward scene interior (+Y)
         cam_positions = np.array([f["position"] for f in frames])
         cam_centroid = np.mean(cam_positions, axis=0) if len(cam_positions) > 0 else np.zeros(3)
         if np.dot(normal, cam_centroid) + d < 0:
@@ -133,7 +156,6 @@ class AlignStage(BaseStage):
         R = compute_rotation_matrix_to_y(normal)
 
         # Apply rotation to points to find floor y
-        rot_points = points @ R.T
         rot_floor_candidates = floor_candidates @ R.T
         floor_y = float(np.percentile(rot_floor_candidates[:, 1], 5))
 
@@ -147,18 +169,37 @@ class AlignStage(BaseStage):
         print(f"[INFO] Floor normal: {normal.round(3)}, distance: {d:.3f}")
         print(f"[INFO] Aligning floor: rotating normal to +Y, translating floor Y by {-floor_y:.3f}m -> 0.0m")
 
-        # Transform all frames
+        # Transform all frames (both position and camera rotation quaternion)
         aligned_frames = []
         for f in frames:
             pos = np.array(f["position"])
             pos_h = np.append(pos, 1.0)
             new_pos = (T_align @ pos_h)[:3]
 
-            # Invert transform on rotation if quaternion is stored
+            # Rotate camera orientation quaternion: R_new = R @ R_old
             qx, qy, qz, qw = f["rotation"]
+            try:
+                rot_old = Rotation.from_quat([qx, qy, qz, qw]).as_matrix()
+                rot_new = R @ rot_old
+                new_quat = Rotation.from_matrix(rot_new).as_quat()
+                new_rot = [round(float(c), 6) for c in new_quat]
+            except Exception:
+                new_rot = [qx, qy, qz, qw]
+
             aligned_frames.append({
                 **f,
                 "position": [round(float(new_pos[0]), 4), round(float(new_pos[1]), 4), round(float(new_pos[2]), 4)],
+                "rotation": new_rot,
+            })
+
+        # Transform sparse points
+        aligned_sparse_points = []
+        for pt in sparse_points:
+            pt_pos = np.append(np.array(pt["xyz"]), 1.0)
+            new_xyz = (T_align @ pt_pos)[:3]
+            aligned_sparse_points.append({
+                **pt,
+                "xyz": [round(float(c), 4) for c in new_xyz],
             })
 
         aligned_manifest = {
@@ -166,15 +207,22 @@ class AlignStage(BaseStage):
                 "units": config.general.units,
                 "up": "Y",
                 "floor_y": 0.0,
-                "scale_method": config.general.scale_method,
+                "scale_method": poses_data.get("scale_method", config.general.scale_method),
+                "scale_factor": poses_data.get("scale_factor", 1.0),
                 "transform_matrix": T_align.tolist(),
             },
             "frames": aligned_frames,
+            "sparse_points": aligned_sparse_points,
         }
 
         aligned_out = out_dir / "aligned_poses.json"
         aligned_out.write_text(json.dumps(aligned_manifest, indent=2), encoding="utf-8")
         print(f"[OK] Saved canonical Y-up aligned poses -> {aligned_out}")
+
+        # Also write aligned PLY for visualization and debug
+        if aligned_sparse_points:
+            aligned_ply_path = out_dir / "mesh" / "aligned_points.ply"
+            write_points_ply(aligned_sparse_points, aligned_ply_path)
 
         context["aligned_poses"] = aligned_manifest
         context["T_align"] = T_align
