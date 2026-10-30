@@ -342,6 +342,10 @@ class PanosStage(BaseStage):
                         # Clear line-of-sight along floor
                         nodes[i]["neighbors"].append(nodes[j]["id"])
 
+        # Persist nodes.json to disk so downstream stages can run in isolation
+        nodes_file = out_dir / "nodes.json"
+        nodes_file.write_text(json.dumps(nodes, indent=2), encoding="utf-8")
+
         context["nodes"] = nodes
         context["panos_dir"] = panos_dir
         return context

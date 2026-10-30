@@ -219,6 +219,13 @@ class DepthProxyStage(BaseStage):
 
         nodes = context.get("nodes", [])
         if not nodes:
+            nodes_file = out_dir / "nodes.json"
+            if nodes_file.exists():
+                try:
+                    nodes = json.loads(nodes_file.read_text(encoding="utf-8"))
+                except Exception:
+                    pass
+        if not nodes:
             tour_path = out_dir / "tour.json"
             if tour_path.exists():
                 try:
@@ -226,6 +233,29 @@ class DepthProxyStage(BaseStage):
                     nodes = tour_data.get("nodes", [])
                 except Exception:
                     pass
+        if not nodes:
+            # Reconstruct from panos/ directory and aligned_poses.json
+            panos_dir = out_dir / "panos"
+            if panos_dir.exists():
+                pano_files = sorted([p for p in panos_dir.glob("n*.jpg") if not p.name.endswith("_lod.jpg")])
+                f_frames = poses_data.get("frames", [])
+                for idx, pf in enumerate(pano_files):
+                    nid = pf.stem
+                    f_idx = min(len(f_frames) - 1, idx * (len(f_frames) // max(1, len(pano_files))))
+                    pos = f_frames[f_idx]["position"] if f_frames else [0.0, config.general.eye_height, 0.0]
+                    rot = f_frames[f_idx]["rotation"] if f_frames else [0.0, 0.0, 0.0, 1.0]
+                    nodes.append({
+                        "id": nid,
+                        "position": [round(float(pos[0]), 3), config.general.eye_height, round(float(pos[2]), 3)],
+                        "rotation": rot,
+                        "pano": {
+                            "type": "equirect",
+                            "url": f"panos/{nid}.jpg",
+                            "lod_url": f"panos/{nid}_lod.jpg",
+                            "depth_url": f"depth/{nid}.png",
+                        },
+                        "neighbors": [],
+                    })
 
         if not nodes:
             raise RuntimeError("No panorama nodes available for depth prediction.")
