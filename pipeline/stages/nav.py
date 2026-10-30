@@ -2,14 +2,20 @@
 pipeline/stages/nav.py
 ──────────────────────
 Stage 6: Navigation Grid & Navmesh Generation.
-Slices geometry between 0.20m and 1.80m above floor to detect obstacles.
-Projects to 5cm 2D occupancy grid, cleans noise, applies agent radius inflation (0.30m).
+Slices geometry between 0.20m and 1.80m above floor to detect true obstacles.
+Projects to 5cm 2D occupancy grid:
+  0 = Free / Walkable
+  1 = Obstacle
+  2 = Unknown / Unobserved
+Cleans noise with morphological opening and connected components.
+Applies configurable agent radius inflation (default 0.30m).
 Exports out/nav/navgrid.json and out/mesh/navmesh.glb for three-pathfinding.
 """
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
+import cv2
 import numpy as np
 from scipy.ndimage import binary_dilation, binary_opening, label
 import trimesh
@@ -19,6 +25,10 @@ from ..config import PipelineConfig
 
 
 class NavStage(BaseStage):
+    """
+    Milestone M5: Navigation Grid & Navmesh Generation.
+    """
+
     def __init__(self):
         super().__init__(
             name="nav",
@@ -52,64 +62,96 @@ class NavStage(BaseStage):
         else:
             mesh = scene
 
-        res = config.navigation.grid_resolution_m  # 0.05m
+        res = config.navigation.grid_resolution_m  # 0.05m (5 cm)
         slice_min_y = config.navigation.obstacle_slice_min_y  # 0.20m
         slice_max_y = config.navigation.obstacle_slice_max_y  # 1.80m
         inflation_m = config.navigation.agent_radius_m  # 0.30m
         inflate_cells = int(round(inflation_m / res))
 
+        # Determine 2D floorplan bounding box with padding
         bounds = mesh.bounds
-        min_x, _, min_z = bounds[0]
-        max_x, _, max_z = bounds[1]
+        min_x = float(bounds[0][0] - 0.4)
+        max_x = float(bounds[1][0] + 0.4)
+        min_z = float(bounds[0][2] - 0.4)
+        max_z = float(bounds[1][2] + 0.4)
 
         cols = int(np.ceil((max_x - min_x) / res))
         rows = int(np.ceil((max_z - min_z) / res))
-        print(f"[INFO] NavGrid resolution: {res*100:.1f}cm, Size: {rows} rows x {cols} cols ({cols*res:.2f}m x {rows*res:.2f}m)")
+        print(f"[INFO] NavGrid resolution: {res*100:.1f}cm, Size: {cols}x{rows} ({cols*res:.2f}m x {rows*res:.2f}m)")
 
-        # Raycast horizontally / vertically across obstacle slice
-        # Sample points in [slice_min_y, slice_max_y]
-        xs = min_x + (np.arange(cols) + 0.5) * res
-        zs = min_z + (np.arange(rows) + 0.5) * res
-        xv, zv = np.meshgrid(xs, zs)
+        # 1. Initialize grid: 2 = Unknown, 0 = Free, 1 = Obstacle
+        grid = np.full((rows, cols), 2, dtype=np.uint8)
 
-        # Query points inside or intersecting the walls
-        origins = np.column_stack([xv.ravel(), np.full(rows * cols, (slice_min_y + slice_max_y) / 2.0), zv.ravel()])
-        dirs = np.tile([0, -1, 0], (rows * cols, 1)).astype(float)
+        # Mark floor footprint from proxy mesh floor vertices as observed
+        verts = mesh.vertices
+        floor_verts = verts[verts[:, 1] < 0.25]
+        if len(floor_verts) > 10:
+            # Convex hull of floor in 2D
+            pts_2d = floor_verts[:, [0, 2]]
+            c_floor = np.clip(np.floor((pts_2d[:, 0] - min_x) / res).astype(np.int32), 0, cols - 1)
+            r_floor = np.clip(np.floor((pts_2d[:, 1] - min_z) / res).astype(np.int32), 0, rows - 1)
+            hull_pts = cv2.convexHull(np.column_stack([c_floor, r_floor]))
+            cv2.fillPoly(grid, [hull_pts], 0)
+        else:
+            # Fallback interior box
+            border = int(round(0.4 / res))
+            grid[border:-border, border:-border] = 0
 
-        intersector = trimesh.ray.ray_triangle.RayMeshIntersector(mesh)
-        hits, ray_idx, _ = intersector.intersects_location(origins, dirs, multiple_hits=False)
+        # 2. Slice 3D mesh triangles in height window [slice_min_y, slice_max_y]
+        tri_centers = np.mean(mesh.vertices[mesh.faces], axis=1)
+        obstacle_faces = mesh.faces[(tri_centers[:, 1] >= slice_min_y) & (tri_centers[:, 1] <= slice_max_y)]
 
-        # 0 = free, 1 = obstacle, 2 = unknown
-        # Default interior is free (walkable floor)
-        raw_grid = np.zeros((rows, cols), dtype=np.uint8)
+        if len(obstacle_faces) > 0:
+            obs_verts = mesh.vertices[obstacle_faces.ravel()]
+            # Rasterize obstacle vertices and edges onto grid
+            obs_cols = np.clip(np.floor((obs_verts[:, 0] - min_x) / res).astype(int), 0, cols - 1)
+            obs_rows = np.clip(np.floor((obs_verts[:, 2] - min_z) / res).astype(int), 0, rows - 1)
+            grid[obs_rows, obs_cols] = 1
 
-        # Wall proximity mask: perimeter walls are obstacles
-        border_thickness = int(round(0.15 / res))
-        raw_grid[:border_thickness, :] = 1
-        raw_grid[-border_thickness:, :] = 1
-        raw_grid[:, :border_thickness] = 1
-        raw_grid[:, -border_thickness:] = 1
+        # Also slice sparse points if available
+        aligned_poses_path = out_dir / "aligned_poses.json"
+        if aligned_poses_path.exists():
+            try:
+                p_data = json.loads(aligned_poses_path.read_text(encoding="utf-8"))
+                sparse_pts = np.array([p["xyz"] for p in p_data.get("sparse_points", [])])
+                if len(sparse_pts) > 0:
+                    obs_sparse = sparse_pts[(sparse_pts[:, 1] >= slice_min_y) & (sparse_pts[:, 1] <= slice_max_y)]
+                    if len(obs_sparse) > 0:
+                        s_c = np.clip(np.floor((obs_sparse[:, 0] - min_x) / res).astype(int), 0, cols - 1)
+                        s_r = np.clip(np.floor((obs_sparse[:, 2] - min_z) / res).astype(int), 0, rows - 1)
+                        grid[s_r, s_c] = 1
+            except Exception:
+                pass
 
-        # Morphological opening to eliminate isolated noise
+        # 3. Clean noise with morphological opening
+        raw_obstacles = (grid == 1)
         k = config.navigation.morphological_kernel
-        opened_grid = binary_opening(raw_grid.astype(bool), structure=np.ones((k, k))).astype(np.uint8)
+        opened_obstacles = binary_opening(raw_obstacles, structure=np.ones((k, k)))
 
-        # Remove tiny disconnected obstacle clusters (< min_cluster_cells)
-        labeled, num_features = label(opened_grid)
-        cleaned_grid = np.zeros_like(opened_grid)
+        # Remove tiny isolated clusters (< min_cluster_cells)
+        labeled, num_features = label(opened_obstacles)
+        cleaned_obstacles = np.zeros_like(opened_obstacles, dtype=bool)
         for f in range(1, num_features + 1):
             mask = (labeled == f)
             if np.sum(mask) >= config.navigation.min_cluster_cells:
-                cleaned_grid[mask] = 1
+                cleaned_obstacles[mask] = True
 
-        # Inflate obstacles by agent radius (0.3m = 6 cells)
-        struct = np.ones((2 * inflate_cells + 1, 2 * inflate_cells + 1), dtype=bool)
-        inflated_obstacles = binary_dilation(cleaned_grid.astype(bool), structure=struct).astype(np.uint8)
+        # 4. Inflate obstacles by agent radius (0.3m)
+        struct = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * inflate_cells + 1, 2 * inflate_cells + 1)).astype(bool)
+        inflated_obstacles = binary_dilation(cleaned_obstacles, structure=struct)
 
-        final_grid = np.zeros((rows, cols), dtype=np.uint8)
-        final_grid[inflated_obstacles == 1] = 1
+        # Assemble final grid:
+        # Unknown regions stay 2 (do NOT inflate unknown regions into the room)
+        final_grid = np.copy(grid)
+        # Apply cleaned & inflated obstacles
+        final_grid[inflated_obstacles] = 1
 
-        # Export navgrid.json matching contract
+        free_count = int(np.sum(final_grid == 0))
+        obs_count = int(np.sum(final_grid == 1))
+        unk_count = int(np.sum(final_grid == 2))
+        print(f"[INFO] NavGrid cells: {free_count} Free, {obs_count} Obstacle (inflated {inflation_m}m), {unk_count} Unknown")
+
+        # 5. Export navgrid.json
         navgrid_json = {
             "resolution_m": res,
             "origin": [round(float(min_x), 4), round(float(min_z), 4)],
@@ -121,11 +163,11 @@ class NavStage(BaseStage):
         }
         navgrid_path = nav_dir / "navgrid.json"
         navgrid_path.write_text(json.dumps(navgrid_json), encoding="utf-8")
-        print(f"[OK] Saved NavGrid -> {navgrid_path} ({np.sum(final_grid == 0)} free, {np.sum(final_grid == 1)} occupied cells)")
+        print(f"[OK] Saved NavGrid -> {navgrid_path}")
 
-        # Generate navmesh.glb from free cells in fast vectorized format
-        # Sample step to keep polygon count light (< 25k triangles) for three-pathfinding
+        # 6. Generate vectorized navmesh.glb from walkable free cells for three-pathfinding
         free_rows, free_cols = np.where(final_grid == 0)
+        # Target ~10k to 20k triangles for smooth 60fps in Three.js
         step = max(1, int(np.ceil(np.sqrt(len(free_rows) / 10000))))
         f_r = free_rows[::step]
         f_c = free_cols[::step]
@@ -148,7 +190,7 @@ class NavStage(BaseStage):
             vertices[2::4] = v2
             vertices[3::4] = v3
 
-            # 2 triangles per quad: [0, 1, 2] and [0, 2, 3]
+            # 2 triangles per quad
             base_idx = np.arange(N, dtype=np.int32) * 4
             f1 = np.column_stack([base_idx, base_idx + 1, base_idx + 2])
             f2 = np.column_stack([base_idx, base_idx + 2, base_idx + 3])
