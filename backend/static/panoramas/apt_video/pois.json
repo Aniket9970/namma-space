@@ -1,0 +1,19 @@
+[
+  {
+    "id": "poi_n000",
+    "name": "Main Entrance",
+    "category": "Entrance",
+    "aliases": [
+      "main entrance",
+      "spot 1",
+      "room 1"
+    ],
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "node_id": "n000",
+    "source": "manual"
+  }
+]

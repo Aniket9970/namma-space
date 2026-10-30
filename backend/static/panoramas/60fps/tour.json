@@ -1,110 +1,143 @@
 {
-  "slug": "60fps",
-  "default_node": "node_0",
+  "meta": {
+    "units": "m",
+    "up": "Y",
+    "floor_y": 0.0,
+    "scale_method": "colmap_relative"
+  },
   "nodes": [
     {
-      "id": "node_0",
-      "name": "Entrance Foyer",
+      "id": "n000",
       "position": [
-        -3.206,
+        0.0,
         1.65,
-        1.571
+        0.0
       ],
-      "image_url": "/static/panoramas/60fps/node_0.jpg",
-      "connections": [
-        "node_1",
-        "node_2",
-        "node_3"
+      "rotation": [
+        0.030945,
+        0.0,
+        -0.05901,
+        0.997778
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n000.jpg",
+        "lod_url": "panos/n000_lod.jpg",
+        "depth_url": "depth/n000.png"
+      },
+      "neighbors": [
+        "n001",
+        "n002",
+        "n003",
+        "n004"
       ]
     },
     {
-      "id": "node_1",
-      "name": "Living Room View A",
+      "id": "n001",
       "position": [
-        -2.83,
+        -1.827,
         1.65,
-        1.723
+        0.997
       ],
-      "image_url": "/static/panoramas/60fps/node_1.jpg",
-      "connections": [
-        "node_0",
-        "node_2",
-        "node_3"
+      "rotation": [
+        -0.03057,
+        0.600265,
+        -0.001688,
+        0.799215
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n001.jpg",
+        "lod_url": "panos/n001_lod.jpg",
+        "depth_url": "depth/n001.png"
+      },
+      "neighbors": [
+        "n000",
+        "n002",
+        "n003",
+        "n004"
       ]
     },
     {
-      "id": "node_2",
-      "name": "Living Room View B",
+      "id": "n002",
       "position": [
-        -2.124,
+        -1.579,
         1.65,
-        2.429
+        2.352
       ],
-      "image_url": "/static/panoramas/60fps/node_2.jpg",
-      "connections": [
-        "node_1",
-        "node_3",
-        "node_0"
+      "rotation": [
+        -0.091566,
+        0.971539,
+        0.201298,
+        0.084899
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n002.jpg",
+        "lod_url": "panos/n002_lod.jpg",
+        "depth_url": "depth/n002.png"
+      },
+      "neighbors": [
+        "n001",
+        "n003",
+        "n000",
+        "n004"
       ]
     },
     {
-      "id": "node_3",
-      "name": "Dining / Hallway",
+      "id": "n003",
       "position": [
-        -3.013,
+        -1.213,
         1.65,
-        4.696
+        2.51
       ],
-      "image_url": "/static/panoramas/60fps/node_3.jpg",
-      "connections": [
-        "node_2",
-        "node_4",
-        "node_0",
-        "node_1"
+      "rotation": [
+        -0.031569,
+        0.769053,
+        0.098152,
+        0.630815
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n003.jpg",
+        "lod_url": "panos/n003_lod.jpg",
+        "depth_url": "depth/n003.png"
+      },
+      "neighbors": [
+        "n002",
+        "n004",
+        "n000",
+        "n001"
       ]
     },
     {
-      "id": "node_4",
-      "name": "Kitchenette Area",
+      "id": "n004",
       "position": [
-        2.459,
+        -0.533,
         1.65,
-        -2.31
+        2.347
       ],
-      "image_url": "/static/panoramas/60fps/node_4.jpg",
-      "connections": [
-        "node_3",
-        "node_5",
-        "node_6"
-      ]
-    },
-    {
-      "id": "node_5",
-      "name": "Bedroom Suite",
-      "position": [
-        2.439,
-        1.65,
-        -5.28
+      "rotation": [
+        0.078363,
+        -0.453243,
+        0.151422,
+        0.874929
       ],
-      "image_url": "/static/panoramas/60fps/node_5.jpg",
-      "connections": [
-        "node_4",
-        "node_6"
-      ]
-    },
-    {
-      "id": "node_6",
-      "name": "Balcony / Window View",
-      "position": [
-        3.3,
-        1.65,
-        -1.26
-      ],
-      "image_url": "/static/panoramas/60fps/node_6.jpg",
-      "connections": [
-        "node_5",
-        "node_4"
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n004.jpg",
+        "lod_url": "panos/n004_lod.jpg",
+        "depth_url": "depth/n004.png"
+      },
+      "neighbors": [
+        "n003",
+        "n000",
+        "n001",
+        "n002"
       ]
     }
-  ]
+  ],
+  "proxy_mesh": "mesh/proxy.glb",
+  "navmesh": "mesh/navmesh.glb",
+  "navgrid": "nav/navgrid.json"
 }
