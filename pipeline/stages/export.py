@@ -38,7 +38,42 @@ class ExportStage(BaseStage):
     ) -> Dict[str, Any]:
         nodes = context.get("nodes", [])
         if not nodes:
-            # Fallback default node
+            # Check if panos exist in out_dir
+            panos_dir = out_dir / "panos"
+            aligned_path = out_dir / "aligned_poses.json"
+            if aligned_path.exists():
+                try:
+                    data = json.loads(aligned_path.read_text(encoding="utf-8"))
+                    frames = data.get("frames", [])
+                    pano_files = sorted(list(panos_dir.glob("n*.jpg")), key=lambda p: p.name)
+                    # Filter out lod
+                    pano_files = [p for p in pano_files if not p.name.endswith("_lod.jpg")]
+                    for i, p_file in enumerate(pano_files):
+                        nid = p_file.stem
+                        frame_idx = min(len(frames) - 1, i * (len(frames) // max(1, len(pano_files))))
+                        f_pos = frames[frame_idx]["position"] if frames else [0.0, config.general.eye_height, 0.0]
+                        f_rot = frames[frame_idx]["rotation"] if frames else [0.0, 0.0, 0.0, 1.0]
+                        nodes.append({
+                            "id": nid,
+                            "position": [round(float(f_pos[0]), 3), config.general.eye_height, round(float(f_pos[2]), 3)],
+                            "rotation": f_rot,
+                            "pano": {
+                                "type": "equirect",
+                                "url": f"panos/{nid}.jpg",
+                                "lod_url": f"panos/{nid}_lod.jpg",
+                                "depth_url": f"depth/{nid}.png",
+                            },
+                            "neighbors": [],
+                        })
+                    for i in range(len(nodes)):
+                        if i > 0:
+                            nodes[i]["neighbors"].append(nodes[i - 1]["id"])
+                        if i < len(nodes) - 1:
+                            nodes[i]["neighbors"].append(nodes[i + 1]["id"])
+                except Exception:
+                    pass
+
+        if not nodes:
             nodes = [{
                 "id": "n000",
                 "position": [0.0, config.general.eye_height, 0.0],
@@ -69,15 +104,16 @@ class ExportStage(BaseStage):
         tour_path.write_text(json.dumps(tour_manifest, indent=2), encoding="utf-8")
         print(f"[OK] Generated Master Tour Manifest -> {tour_path} ({len(nodes)} nodes)")
 
-        # Generate default POIs contract
+        # Generate default POIs catalog matching contract
         pois = []
         for i, n in enumerate(nodes):
-            name = f"Area {i+1}" if i > 0 else "Entrance"
+            name = f"Node {n['id'].upper()}" if i > 0 else "Main Entrance"
+            category = "Navigation" if i > 0 else "Entrance"
             pois.append({
                 "id": f"poi_{n['id']}",
                 "name": name,
-                "category": "Navigation",
-                "aliases": [name.lower()],
+                "category": category,
+                "aliases": [name.lower(), f"spot {i+1}", f"room {i+1}"],
                 "position": [n["position"][0], config.general.target_floor_y, n["position"][2]],
                 "node_id": n["id"],
                 "source": "manual",
@@ -95,29 +131,46 @@ class ExportStage(BaseStage):
             dest_tour_dir = backend_static / "panoramas" / slug
             dest_tour_dir.mkdir(parents=True, exist_ok=True)
 
-            # Copy panos
+            # Copy panos (both into panos/ subfolder and root for compatibility)
             panos_src = out_dir / "panos"
             if panos_src.exists():
+                (dest_tour_dir / "panos").mkdir(parents=True, exist_ok=True)
                 for f in panos_src.glob("*.jpg"):
+                    shutil.copy2(str(f), str(dest_tour_dir / "panos" / f.name))
                     shutil.copy2(str(f), str(dest_tour_dir / f.name))
 
-            # Copy tour.json
-            shutil.copy2(str(tour_path), str(dest_tour_dir / "tour.json"))
+            # Copy depth maps
+            depth_src = out_dir / "depth"
+            if depth_src.exists():
+                (dest_tour_dir / "depth").mkdir(parents=True, exist_ok=True)
+                for f in depth_src.glob("*.png"):
+                    shutil.copy2(str(f), str(dest_tour_dir / "depth" / f.name))
 
-            # Copy models
+            # Copy mesh files
+            mesh_src = out_dir / "mesh"
+            if mesh_src.exists():
+                (dest_tour_dir / "mesh").mkdir(parents=True, exist_ok=True)
+                for f in mesh_src.glob("*.glb"):
+                    shutil.copy2(str(f), str(dest_tour_dir / "mesh" / f.name))
+
+            # Copy nav files
+            nav_src = out_dir / "nav"
+            if nav_src.exists():
+                (dest_tour_dir / "nav").mkdir(parents=True, exist_ok=True)
+                for f in nav_src.glob("*.*"):
+                    shutil.copy2(str(f), str(dest_tour_dir / "nav" / f.name))
+
+            # Copy tour.json and pois.json
+            shutil.copy2(str(tour_path), str(dest_tour_dir / "tour.json"))
+            shutil.copy2(str(pois_path), str(dest_tour_dir / "pois.json"))
+
+            # Copy models to models/
             models_dest = backend_static / "models"
             models_dest.mkdir(parents=True, exist_ok=True)
             proxy_src = out_dir / "mesh" / "proxy.glb"
             if proxy_src.exists():
                 shutil.copy2(str(proxy_src), str(models_dest / f"{slug}.glb"))
                 shutil.copy2(str(proxy_src), str(models_dest / "scene.glb"))
-
-            # Copy nav
-            nav_dest = backend_static / "navigation"
-            nav_dest.mkdir(parents=True, exist_ok=True)
-            navgrid_src = out_dir / "nav" / "navgrid.json"
-            if navgrid_src.exists():
-                shutil.copy2(str(navgrid_src), str(nav_dest / "navgrid.json"))
 
             # Sync SQLite scene
             db_path = backend_dir / "namma_space.db"
@@ -150,4 +203,3 @@ class ExportStage(BaseStage):
         context["tour_manifest"] = tour_manifest
         context["pois"] = pois
         return context
-

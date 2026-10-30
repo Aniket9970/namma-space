@@ -1,0 +1,131 @@
+{
+  "meta": {
+    "units": "m",
+    "up": "Y",
+    "floor_y": 0.0,
+    "scale_method": "colmap_relative"
+  },
+  "nodes": [
+    {
+      "id": "n000",
+      "position": [
+        2.843,
+        1.65,
+        -3.226
+      ],
+      "rotation": [
+        0.955417,
+        0.097451,
+        0.19415,
+        0.199969
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n000.jpg",
+        "lod_url": "panos/n000_lod.jpg",
+        "depth_url": "depth/n000.png"
+      },
+      "neighbors": [
+        "n001"
+      ]
+    },
+    {
+      "id": "n001",
+      "position": [
+        0.732,
+        1.65,
+        -1.631
+      ],
+      "rotation": [
+        0.93179,
+        0.072622,
+        0.201956,
+        0.292758
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n001.jpg",
+        "lod_url": "panos/n001_lod.jpg",
+        "depth_url": "depth/n001.png"
+      },
+      "neighbors": [
+        "n000",
+        "n002"
+      ]
+    },
+    {
+      "id": "n002",
+      "position": [
+        -0.496,
+        1.65,
+        0.148
+      ],
+      "rotation": [
+        0.732773,
+        0.036931,
+        0.234555,
+        0.637702
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n002.jpg",
+        "lod_url": "panos/n002_lod.jpg",
+        "depth_url": "depth/n002.png"
+      },
+      "neighbors": [
+        "n001",
+        "n003"
+      ]
+    },
+    {
+      "id": "n003",
+      "position": [
+        -0.535,
+        1.65,
+        0.189
+      ],
+      "rotation": [
+        0.430429,
+        -0.010695,
+        0.229407,
+        0.87292
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n003.jpg",
+        "lod_url": "panos/n003_lod.jpg",
+        "depth_url": "depth/n003.png"
+      },
+      "neighbors": [
+        "n002",
+        "n004"
+      ]
+    },
+    {
+      "id": "n004",
+      "position": [
+        -0.487,
+        1.65,
+        1.357
+      ],
+      "rotation": [
+        0.12626,
+        -0.05022,
+        0.213613,
+        0.967422
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n004.jpg",
+        "lod_url": "panos/n004_lod.jpg",
+        "depth_url": "depth/n004.png"
+      },
+      "neighbors": [
+        "n003"
+      ]
+    }
+  ],
+  "proxy_mesh": "mesh/proxy.glb",
+  "navmesh": "mesh/navmesh.glb",
+  "navgrid": "nav/navgrid.json"
+}

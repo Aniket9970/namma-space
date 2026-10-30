@@ -1,23 +1,68 @@
 import React, { useState, useEffect, useRef, Suspense, useMemo } from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree, useLoader } from '@react-three/fiber'
-import { Text } from '@react-three/drei'
+import { Text, useGLTF } from '@react-three/drei'
+import useStore from '../store/useStore'
 
-// ── Photosphere Sphere Component ──────────────────────────────────────────────
-function SpherePanorama({ imageUrl, opacity = 1.0, rotationZ = 0, rotationX = 0 }) {
-  const texture = useLoader(THREE.TextureLoader, imageUrl)
-  
+// ── Progressive Texture Loader Cache ──────────────────────────────────────────
+const textureCache = new Map()
+
+function useProgressiveTexture(lodUrl, highResUrl) {
+  const [texture, setTexture] = useState(() => textureCache.get(highResUrl) || textureCache.get(lodUrl) || null)
+
   useEffect(() => {
-    if (texture) {
-      texture.wrapS = THREE.RepeatWrapping
-      texture.repeat.x = -1 // Flip horizontally for interior view
-      texture.needsUpdate = true
+    let isMounted = true
+    const loader = new THREE.TextureLoader()
+
+    // 1. If high-res already in cache, use immediately
+    if (highResUrl && textureCache.has(highResUrl)) {
+      setTexture(textureCache.get(highResUrl))
+      return
     }
-  }, [texture])
+
+    // 2. Load low-res preview LOD first (< 100ms)
+    if (lodUrl && !textureCache.has(lodUrl)) {
+      loader.load(lodUrl, (lodTex) => {
+        if (!isMounted) return
+        lodTex.wrapS = THREE.RepeatWrapping
+        lodTex.repeat.x = -1
+        lodTex.needsUpdate = true
+        textureCache.set(lodUrl, lodTex)
+        if (!textureCache.has(highResUrl)) {
+          setTexture(lodTex)
+        }
+      })
+    }
+
+    // 3. Load full 4096x2048 production texture and upgrade
+    if (highResUrl) {
+      loader.load(highResUrl, (highTex) => {
+        if (!isMounted) return
+        highTex.wrapS = THREE.RepeatWrapping
+        highTex.repeat.x = -1
+        highTex.needsUpdate = true
+        textureCache.set(highResUrl, highTex)
+        setTexture(highTex)
+      })
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [lodUrl, highResUrl])
+
+  return texture
+}
+
+// ── SpherePanorama Component ──────────────────────────────────────────────────
+function SpherePanorama({ lodUrl, highResUrl, opacity = 1.0, rotationZ = 0, rotationX = 0 }) {
+  const texture = useProgressiveTexture(lodUrl, highResUrl)
+
+  if (!texture) return null
 
   return (
     <mesh rotation={[rotationX, 0, rotationZ]}>
-      <sphereGeometry args={[25, 60, 40]} />
+      <sphereGeometry args={[30, 60, 40]} />
       <meshBasicMaterial
         map={texture}
         side={THREE.BackSide}
@@ -29,7 +74,39 @@ function SpherePanorama({ imageUrl, opacity = 1.0, rotationZ = 0, rotationX = 0 
   )
 }
 
-// ── Animated Floor Navigation Puck (Google Street View / Matterport style) ─────
+// ── Projective Transition Proxy Mesh (SPHR-Style Parallax Flight) ─────────────
+function ProjectiveProxyMesh({ proxyUrl, textureUrl, nodePos, progress }) {
+  const { scene } = useGLTF(proxyUrl)
+  const texture = useMemo(() => {
+    if (!textureUrl) return null
+    return textureCache.get(textureUrl) || new THREE.TextureLoader().load(textureUrl)
+  }, [textureUrl])
+
+  // Fade out proxy mesh near arrival as destination panorama sphere crossfades in
+  const opacity = useMemo(() => {
+    if (progress < 0.7) return 0.95
+    return Math.max(0.0, 1.0 - (progress - 0.7) / 0.3)
+  }, [progress])
+
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone()
+    clone.traverse((child) => {
+      if (child.isMesh) {
+        child.material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          opacity: opacity,
+          side: THREE.DoubleSide,
+        })
+      }
+    })
+    return clone
+  }, [scene, texture, opacity])
+
+  return <primitive object={clonedScene} />
+}
+
+// ── Interactive Navigation Puck ───────────────────────────────────────────────
 function NavigationPuck({ node, onClick }) {
   const [hovered, setHovered] = useState(false)
   const ringRef = useRef()
@@ -42,7 +119,6 @@ function NavigationPuck({ node, onClick }) {
     }
   })
 
-  // Ground level at node XZ coordinates
   const pos = [node.position[0], 0.04, node.position[2]]
 
   return (
@@ -51,11 +127,21 @@ function NavigationPuck({ node, onClick }) {
       <mesh
         ref={ringRef}
         rotation={[-Math.PI / 2, 0, 0]}
-        onClick={(e) => { e.stopPropagation(); onClick(node.id) }}
-        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer' }}
-        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto' }}
+        onClick={(e) => {
+          e.stopPropagation()
+          onClick(node.id)
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation()
+          setHovered(true)
+          document.body.style.cursor = 'pointer'
+        }}
+        onPointerOut={() => {
+          setHovered(false)
+          document.body.style.cursor = 'auto'
+        }}
       >
-        <ringGeometry args={[0.35, 0.45, 32]} />
+        <ringGeometry args={[0.35, 0.48, 32]} />
         <meshBasicMaterial
           color={hovered ? '#ffaa00' : '#00e5ff'}
           side={THREE.DoubleSide}
@@ -67,18 +153,21 @@ function NavigationPuck({ node, onClick }) {
       {/* Inner solid disc */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        onClick={(e) => { e.stopPropagation(); onClick(node.id) }}
+        onClick={(e) => {
+          e.stopPropagation()
+          onClick(node.id)
+        }}
       >
-        <circleGeometry args={[0.25, 32]} />
+        <circleGeometry args={[0.26, 32]} />
         <meshBasicMaterial
           color={hovered ? '#ff7700' : '#0088cc'}
           side={THREE.DoubleSide}
           transparent
-          opacity={0.6}
+          opacity={0.65}
         />
       </mesh>
 
-      {/* Hover Room Label */}
+      {/* Label */}
       <Text
         position={[0, 0.45, 0]}
         fontSize={0.22}
@@ -88,33 +177,46 @@ function NavigationPuck({ node, onClick }) {
         outlineWidth={0.02}
         outlineColor="#000000"
       >
-        {node.name}
+        {node.name || `Node ${node.id.toUpperCase()}`}
       </Text>
     </group>
   )
 }
 
-// ── Smooth Camera Transition Controller ───────────────────────────────────────
-function CameraNavigator({ targetPos, isTransitioning, onTransitionComplete }) {
+// ── SPHR Projective Flight Controller ─────────────────────────────────────────
+function TravelNavigator({ startPos, targetPos, isTravelling, onTravelEnd, onProgress }) {
   const { camera } = useThree()
-  const targetVec = useMemo(() => new THREE.Vector3(...targetPos), [targetPos])
+  const progressRef = useRef(0)
+  const durationSec = 0.75 // 750ms fluid transition
 
   useFrame((state, delta) => {
-    if (!isTransitioning) return
+    if (!isTravelling) return
 
-    // Smooth exponential approach
-    camera.position.lerp(targetVec, Math.min(1.0, delta * 5.0))
+    progressRef.current += delta / durationSec
+    const p = Math.min(1.0, progressRef.current)
 
-    if (camera.position.distanceTo(targetVec) < 0.05) {
-      camera.position.copy(targetVec)
-      if (onTransitionComplete) onTransitionComplete()
+    // Smooth cubic ease-in-out curve
+    const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
+
+    const currentPos = new THREE.Vector3().lerpVectors(
+      new THREE.Vector3(...startPos),
+      new THREE.Vector3(...targetPos),
+      ease
+    )
+    camera.position.copy(currentPos)
+    if (onProgress) onProgress(p)
+
+    if (p >= 1.0) {
+      camera.position.set(...targetPos)
+      progressRef.current = 0
+      if (onTravelEnd) onTravelEnd()
     }
   })
 
   return null
 }
 
-// ── Main Photosphere Tour Root ────────────────────────────────────────────────
+// ── PhotosphereTour Main Component ────────────────────────────────────────────
 export default function PhotosphereTour({
   tourData,
   activeNodeId,
@@ -124,41 +226,86 @@ export default function PhotosphereTour({
   rotationZ = 0,
   rotationX = 0,
 }) {
-  const [transitioning, setTransitioning] = useState(false)
-  const { camera } = useThree()
+  const [travelling, setTravelling] = useState(false)
+  const [travelStartNode, setTravelStartNode] = useState(null)
+  const [travelTargetNode, setTravelTargetNode] = useState(null)
+  const [travelProgress, setTravelProgress] = useState(0)
 
+  const { camera } = useThree()
   const nodes = tourData?.nodes || []
   const activeNode = nodes.find((n) => n.id === activeNodeId) || nodes[0]
+
+  // Resolve base asset path
+  const tourBasePath = useMemo(() => {
+    const raw = tourData?.meta?.base_url || '/static/panoramas/sample_scene'
+    return raw.endsWith('/') ? raw.slice(0, -1) : raw
+  }, [tourData])
+
+  // Preload neighboring node textures in background
+  useEffect(() => {
+    if (!activeNode || !nodes) return
+    const loader = new THREE.TextureLoader()
+    const neighborIds = activeNode.neighbors || []
+    nodes
+      .filter((n) => neighborIds.includes(n.id))
+      .forEach((n) => {
+        const lodUrl = `${tourBasePath}/${n.pano?.lod_url || `panos/${n.id}_lod.jpg`}`
+        if (!textureCache.has(lodUrl)) {
+          loader.load(lodUrl, (tex) => {
+            tex.wrapS = THREE.RepeatWrapping
+            tex.repeat.x = -1
+            textureCache.set(lodUrl, tex)
+          })
+        }
+      })
+  }, [activeNode, nodes, tourBasePath])
 
   // Connected neighbors for floor pucks
   const connectedNodes = useMemo(() => {
     if (!activeNode || !nodes) return []
-    const connIds = new Set(activeNode.connections || [])
-    return nodes.filter((n) => connIds.has(n.id))
+    const neighborSet = new Set(activeNode.neighbors || [])
+    return nodes.filter((n) => neighborSet.has(n.id))
   }, [activeNode, nodes])
 
   const handlePuckClick = (targetId) => {
-    if (transitioning) return
-    setTransitioning(true)
+    if (travelling || targetId === activeNode?.id) return
+    const targetNode = nodes.find((n) => n.id === targetId)
+    if (!targetNode) return
+
+    setTravelStartNode(activeNode)
+    setTravelTargetNode(targetNode)
+    setTravelling(true)
+    setTravelProgress(0)
+
     if (onNodeChange) onNodeChange(targetId)
   }
 
-  const handleTransitionEnd = () => {
-    setTransitioning(false)
+  const handleTravelEnd = () => {
+    setTravelling(false)
+    setTravelStartNode(null)
+    setTravelTargetNode(null)
+    setTravelProgress(1.0)
   }
 
-  // When active node changes, ensure camera smoothly aligns to that node's eye height
-  const eyePosition = activeNode ? [activeNode.position[0], 1.65, activeNode.position[2]] : [0, 1.65, 0]
+  const activePos = activeNode ? [activeNode.position[0], 1.65, activeNode.position[2]] : [0, 1.65, 0]
+  const startPos = travelStartNode ? [travelStartNode.position[0], 1.65, travelStartNode.position[2]] : activePos
+  const targetPos = travelTargetNode ? [travelTargetNode.position[0], 1.65, travelTargetNode.position[2]] : activePos
+
+  const activePanoUrl = activeNode ? `${tourBasePath}/${activeNode.pano?.url || `panos/${activeNode.id}.jpg`}` : null
+  const activeLodUrl = activeNode ? `${tourBasePath}/${activeNode.pano?.lod_url || `panos/${activeNode.id}_lod.jpg`}` : null
+  const proxyMeshUrl = `${tourBasePath}/mesh/proxy.glb`
 
   return (
     <group>
-      {/* Active Room Photosphere (Rendered in POV mode) */}
+      {/* 1. Active Spherical Panorama (POV Mode) */}
       {!isDollhouse && activeNode && (
-        <group position={[activeNode.position[0], 1.65, activeNode.position[2]]}>
+        <group position={activePos}>
           <Suspense fallback={null}>
             <SpherePanorama
-              key={`${activeNode.image_url}-${rotationZ}-${rotationX}`}
-              imageUrl={activeNode.image_url}
+              key={`pano-${activeNode.id}-${rotationZ}-${rotationX}`}
+              lodUrl={activeLodUrl}
+              highResUrl={activePanoUrl}
+              opacity={travelling ? Math.min(1.0, (travelProgress - 0.7) / 0.3) : 1.0}
               rotationZ={rotationZ}
               rotationX={rotationX}
             />
@@ -166,62 +313,77 @@ export default function PhotosphereTour({
         </group>
       )}
 
-      {/* Navigation Floor Pucks (Only shown in Human POV mode for adjacent rooms) */}
-      {!isDollhouse &&
-        connectedNodes.map((n) => (
-          <NavigationPuck
-            key={n.id}
-            node={n}
-            onClick={handlePuckClick}
+      {/* 2. SPHR Projective Proxy Mesh during Travel Flight */}
+      {!isDollhouse && travelling && travelStartNode && (
+        <Suspense fallback={null}>
+          <ProjectiveProxyMesh
+            proxyUrl={proxyMeshUrl}
+            textureUrl={`${tourBasePath}/${travelStartNode.pano?.url || `panos/${travelStartNode.id}.jpg`}`}
+            nodePos={travelStartNode.position}
+            progress={travelProgress}
           />
+        </Suspense>
+      )}
+
+      {/* 3. Navigation Floor Pucks at Connected Neighbors */}
+      {!isDollhouse &&
+        !travelling &&
+        connectedNodes.map((n) => (
+          <NavigationPuck key={n.id} node={n} onClick={handlePuckClick} />
         ))}
 
-      {/* Dollhouse Mode: All Waypoint Markers in 3D Overview */}
+      {/* 4. Dollhouse Node Markers */}
       {isDollhouse &&
         nodes.map((n) => {
           const isActive = n.id === activeNode?.id
           return (
-            <group key={n.id} position={[n.position[0], 0.2, n.position[2]]}>
+            <group key={n.id} position={[n.position[0], 0.25, n.position[2]]}>
               <mesh
                 onClick={(e) => {
                   e.stopPropagation()
                   if (onNodeChange) onNodeChange(n.id)
                   if (onEnterPOV) onEnterPOV()
                 }}
-                onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer' }}
-                onPointerOut={() => { document.body.style.cursor = 'auto' }}
+                onPointerOver={(e) => {
+                  e.stopPropagation()
+                  document.body.style.cursor = 'pointer'
+                }}
+                onPointerOut={() => {
+                  document.body.style.cursor = 'auto'
+                }}
               >
                 <sphereGeometry args={[0.22, 24, 24]} />
                 <meshStandardMaterial
-                  color={isActive ? '#ff9900' : '#00e5ff'}
+                  color={isActive ? '#ffaa00' : '#00e5ff'}
                   emissive={isActive ? '#ff5500' : '#0088cc'}
                   emissiveIntensity={0.8}
                 />
               </mesh>
               <Text
                 position={[0, 0.4, 0]}
-                fontSize={0.25}
+                fontSize={0.24}
                 color={isActive ? '#ffdd00' : '#ffffff'}
                 anchorX="center"
                 anchorY="bottom"
                 outlineWidth={0.02}
                 outlineColor="#000000"
               >
-                {n.name}
+                {n.name || `Node ${n.id.toUpperCase()}`}
               </Text>
             </group>
           )
         })}
 
-      {/* Smooth glide camera navigator */}
-      {!isDollhouse && (
-        <CameraNavigator
-          targetPos={eyePosition}
-          isTransitioning={transitioning}
-          onTransitionComplete={handleTransitionEnd}
+      {/* 5. Smooth Glide Flight Controller */}
+      {!isDollhouse && travelling && (
+        <TravelNavigator
+          startPos={startPos}
+          targetPos={targetPos}
+          isTravelling={travelling}
+          onProgress={setTravelProgress}
+          onTravelEnd={handleTravelEnd}
         />
       )}
     </group>
   )
 }
-

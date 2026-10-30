@@ -1,98 +1,16 @@
-import { useEffect, useRef, useState, useCallback, Suspense } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import React, { useEffect, useRef, useState, useCallback, Suspense, useMemo } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
 import { Splat, Text, Line, Grid, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 
-import useStore from '../store/useStore.js'
-import useKeyboard from '../hooks/useKeyboard.js'
-import usePOIs from '../hooks/usePOIs.js'
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-const WALK_SPEED = 3      // units / second
-const SPRINT_SPEED = 6    // units / second with Shift
-const LOOK_SENSITIVITY = 0.002
-const MAX_PITCH_RAD = (85 * Math.PI) / 180
-const CAMERA_HEIGHT = 1.65 // eye height in world units
-
-// ── FirstPersonControls ───────────────────────────────────────────────────────
-function FirstPersonControls({ enabled }) {
-  const { camera, gl } = useThree()
-  const keysRef = useKeyboard()
-  const yawRef = useRef(0)
-  const pitchRef = useRef(0)
-  const isLockedRef = useRef(false)
-
-  // Set initial camera position: standing at entrance looking into the room
-  useEffect(() => {
-    camera.position.set(0, CAMERA_HEIGHT, -4.0)
-    camera.rotation.order = 'YXZ'
-    yawRef.current = Math.PI // Face towards +Z
-  }, [camera])
-
-  // Pointer lock
-  useEffect(() => {
-    if (!enabled) return
-
-    const canvas = gl.domElement
-
-    const onClick = () => {
-      canvas.requestPointerLock()
-    }
-
-    const onPointerLockChange = () => {
-      isLockedRef.current = document.pointerLockElement === canvas
-    }
-
-    const onMouseMove = (e) => {
-      if (!isLockedRef.current) return
-      yawRef.current -= e.movementX * LOOK_SENSITIVITY
-      pitchRef.current -= e.movementY * LOOK_SENSITIVITY
-      pitchRef.current = Math.max(-MAX_PITCH_RAD, Math.min(MAX_PITCH_RAD, pitchRef.current))
-    }
-
-    canvas.addEventListener('click', onClick)
-    document.addEventListener('pointerlockchange', onPointerLockChange)
-    document.addEventListener('mousemove', onMouseMove)
-
-    return () => {
-      canvas.removeEventListener('click', onClick)
-      document.removeEventListener('pointerlockchange', onPointerLockChange)
-      document.removeEventListener('mousemove', onMouseMove)
-    }
-  }, [enabled, gl])
-
-  useFrame((_, delta) => {
-    if (!enabled) return
-
-    // Apply look rotation
-    camera.rotation.set(pitchRef.current, yawRef.current, 0, 'YXZ')
-
-    // WASD movement
-    const speed = keysRef.current.shift ? SPRINT_SPEED : WALK_SPEED
-    const move = new THREE.Vector3()
-
-    if (keysRef.current.w) move.z -= 1
-    if (keysRef.current.s) move.z += 1
-    if (keysRef.current.a) move.x -= 1
-    if (keysRef.current.d) move.x += 1
-
-    if (move.lengthSq() > 0) {
-      move.normalize().multiplyScalar(speed * delta)
-      const yawQuat = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(0, yawRef.current, 0, 'YXZ')
-      )
-      move.applyQuaternion(yawQuat)
-      camera.position.add(move)
-    }
-
-    // Floor clamp
-    if (camera.position.y < 0.5) {
-      camera.position.y = 0.5
-    }
-  })
-
-  return null
-}
+import useStore from '../store/useStore'
+import usePOIs from '../hooks/usePOIs'
+import PhotosphereTour from './PhotosphereTour'
+import FreeRoamControls from './FreeRoamControls'
+import ProxyMeshView from './ProxyMeshView'
+import Minimap from './Minimap'
+import POISearchBar from './POISearchBar'
+import ARCompanion from './ARCompanion'
 
 // ── POIMarkers ────────────────────────────────────────────────────────────────
 function POIMarkers({ pois, onSelect }) {
@@ -102,13 +20,25 @@ function POIMarkers({ pois, onSelect }) {
     <group>
       {pois.map((poi) => {
         const isSelected = selectedPOI?.id === poi.id
+        const px = poi.x ?? poi.position?.[0] ?? 0
+        const py = poi.y ?? poi.position?.[1] ?? 0
+        const pz = poi.z ?? poi.position?.[2] ?? 0
+
         return (
-          <group key={poi.id} position={[poi.x, poi.y + 0.8, poi.z]}>
+          <group key={poi.id} position={[px, py + 0.8, pz]}>
             {/* Floating marker sphere */}
             <mesh
-              onClick={(e) => { e.stopPropagation(); onSelect(poi) }}
-              onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer' }}
-              onPointerOut={() => { document.body.style.cursor = 'auto' }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onSelect(poi)
+              }}
+              onPointerOver={(e) => {
+                e.stopPropagation()
+                document.body.style.cursor = 'pointer'
+              }}
+              onPointerOut={() => {
+                document.body.style.cursor = 'auto'
+              }}
             >
               <sphereGeometry args={[0.15, 16, 16]} />
               <meshStandardMaterial
@@ -143,16 +73,17 @@ function POIMarkers({ pois, onSelect }) {
   )
 }
 
-// ── NavigationPath ────────────────────────────────────────────────────────────
+// ── NavigationPath Ribbon ─────────────────────────────────────────────────────
 function NavigationPath({ path }) {
   if (!path || path.length < 2) return null
 
-  const points = path.map(([x, y, z]) => new THREE.Vector3(x, y + 0.05, z))
+  const points = path.map(([x, y, z]) => new THREE.Vector3(x, (y ?? 0) + 0.05, z ?? y))
   const curve = new THREE.CatmullRomCurve3(points)
   const smoothPoints = curve.getPoints(Math.max(50, points.length * 5))
 
   return (
     <group>
+      {/* Primary gold path line */}
       <Line
         points={smoothPoints}
         color="#ffdd00"
@@ -161,19 +92,22 @@ function NavigationPath({ path }) {
         transparent
         opacity={0.95}
       />
+      {/* Wide orange glow ribbon */}
       <Line
         points={smoothPoints}
         color="#ff8800"
-        lineWidth={12}
+        lineWidth={14}
         transparent
-        opacity={0.3}
+        opacity={0.35}
       />
+      {/* Start anchor marker */}
       <mesh position={points[0]}>
-        <sphereGeometry args={[0.1, 16, 16]} />
+        <sphereGeometry args={[0.12, 16, 16]} />
         <meshStandardMaterial color="#00ff88" emissive="#00cc44" emissiveIntensity={1} />
       </mesh>
+      {/* Goal anchor marker */}
       <mesh position={points[points.length - 1]}>
-        <sphereGeometry args={[0.1, 16, 16]} />
+        <sphereGeometry args={[0.14, 16, 16]} />
         <meshStandardMaterial color="#ff3333" emissive="#cc0000" emissiveIntensity={1} />
       </mesh>
     </group>
@@ -192,7 +126,7 @@ function FloorGrid() {
       sectionSize={5}
       sectionThickness={1}
       sectionColor="#2a3a4a"
-      fadeDistance={25}
+      fadeDistance={30}
       fadeStrength={1}
       followCamera={false}
       infiniteGrid={false}
@@ -200,7 +134,7 @@ function FloorGrid() {
   )
 }
 
-// ── POI Placement Raycaster ───────────────────────────────────────────────────
+// ── Double-Click POI Placement Raycaster ──────────────────────────────────────
 function POIPlacementHandler({ onPlace }) {
   const { camera, scene: threeScene, gl } = useThree()
   const raycaster = useRef(new THREE.Raycaster())
@@ -212,7 +146,7 @@ function POIPlacementHandler({ onPlace }) {
       const rect = canvas.getBoundingClientRect()
       const ndc = new THREE.Vector2(
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
       )
       raycaster.current.setFromCamera(ndc, camera)
       const intersects = raycaster.current.intersectObjects(threeScene.children, true)
@@ -229,25 +163,16 @@ function POIPlacementHandler({ onPlace }) {
   return null
 }
 
-import PhotosphereTour from './PhotosphereTour.jsx'
-
-// ── Gaussian Splat Component ──────────────────────────────────────────────────
-function PhotorealisticSplat({ splatUrl, invertY, sceneId, rotationZ = 0, rotationX = 0 }) {
+// ── Lazy Photoreal Splat Component ────────────────────────────────────────────
+function PhotorealisticSplat({ splatUrl, rotationZ = 0, rotationX = 0 }) {
   if (!splatUrl) return null
-
-  // By default (invertY = false), rotation is [0, 0, 0] so ceiling is upright overhead.
-  // If inverted, [Math.PI, 0, 0] flips it. rotationZ rolls, rotationX pitches.
-  const rx = (invertY ? Math.PI : 0) + rotationX
-  const rz = rotationZ
-  const yPos = invertY ? 1.2 : 1.65
 
   return (
     <Suspense fallback={null}>
       <Splat
-        key={`${sceneId}-${splatUrl}-${invertY}-${rx.toFixed(2)}-${rz.toFixed(2)}`}
         src={splatUrl}
-        rotation={[rx, 0, rz]}
-        position={[0, yPos, 0]}
+        rotation={[rotationX, 0, rotationZ]}
+        position={[0, 1.65, 0]}
         scale={[1, 1, 1]}
         alphaTest={0.05}
       />
@@ -255,354 +180,383 @@ function PhotorealisticSplat({ splatUrl, invertY, sceneId, rotationZ = 0, rotati
   )
 }
 
-// ── Main 3D Viewer ────────────────────────────────────────────────────────────
+// ── Main 3D Viewer Root ───────────────────────────────────────────────────────
 export default function Viewer3D({ onPOIPlace }) {
-  const { currentScene, pois, navigationPath, mode, selectPOI } = useStore()
-  const [controlType, setControlType] = useState('orbit') // 'fps' | 'orbit'
-  const [invertY, setInvertY] = useState(false) // Default upright: ceiling overhead
-  const [tourData, setTourData] = useState(null)
-  const [activeNodeId, setActiveNodeId] = useState(null)
-  const [tourMode, setTourMode] = useState('photosphere') // 'photosphere' | 'dollhouse' | 'splat'
+  const {
+    currentScene,
+    pois,
+    setPOIs,
+    selectedPOI,
+    selectPOI,
+    navigationPath,
+    setPath,
+    tourMode,
+    setTourMode,
+    activeNodeId,
+    setActiveNodeId,
+    collisionEnabled,
+    setCollisionEnabled,
+    tourData,
+    setTourData,
+  } = useStore()
 
-  // Rotation roll (Z) and pitch (X) in radians
-  // Roomvid portrait video defaults to rotated left (+90 deg / Math.PI / 2)
-  const isRoomvid = currentScene?.name?.toLowerCase().includes('roomvid')
-  const [rotationZ, setRotationZ] = useState(isRoomvid ? Math.PI / 2 : 0)
+  // Scene rotation adjustments if needed
+  const [rotationZ, setRotationZ] = useState(0)
   const [rotationX, setRotationX] = useState(0)
+  const [showAR, setShowAR] = useState(false)
 
+  // 1. Fetch tour.json manifest on scene load
   useEffect(() => {
-    if (currentScene?.name?.toLowerCase().includes('roomvid')) {
-      setRotationZ(Math.PI / 2)
-      setRotationX(0)
-    } else {
-      setRotationZ(0)
-      setRotationX(0)
-    }
-  }, [currentScene?.id])
+    const tourUrl = currentScene?.tour_path || '/static/panoramas/sample_scene/tour.json'
+    fetch(tourUrl)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.nodes && data.nodes.length > 0) {
+          // Normalize base URL
+          data.meta = data.meta || {}
+          data.meta.base_url = tourUrl.substring(0, tourUrl.lastIndexOf('/'))
+          setTourData(data)
+          setActiveNodeId(data.default_node || data.nodes[0].id)
+          setTourMode('photosphere')
+        }
+      })
+      .catch((err) => console.warn('Could not load tour.json:', err))
+  }, [currentScene?.id, setTourData, setActiveNodeId, setTourMode])
 
-  const handleRotateLeft = () => setRotationZ((prev) => (prev + Math.PI / 2) % (2 * Math.PI))
-  const handleRotateRight = () => setRotationZ((prev) => (prev - Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI))
-  const handlePitch = () => setRotationX((prev) => (prev + Math.PI / 2) % (2 * Math.PI))
-  const handleReset = () => { setRotationZ(0); setRotationX(0); setInvertY(false) }
-
-  const splatUrl = currentScene?.splat_path || '/static/models/scene.splat'
-
-  // Fetch photosphere tour if available for this scene
+  // 2. Fetch or initialize POIs catalog
   useEffect(() => {
-    if (currentScene?.tour_path) {
-      fetch(currentScene.tour_path)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && data.nodes && data.nodes.length > 0) {
-            setTourData(data)
-            setActiveNodeId(data.default_node || data.nodes[0].id)
-            setTourMode('photosphere')
-          } else {
-            setTourData(null)
-            setTourMode('splat')
+    if (!currentScene?.id) return
+    const poisUrl = currentScene.tour_path
+      ? `${currentScene.tour_path.substring(0, currentScene.tour_path.lastIndexOf('/'))}/pois.json`
+      : '/static/panoramas/sample_scene/pois.json'
+
+    fetch(poisUrl)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setPOIs(
+            data.map((p) => ({
+              id: p.id,
+              name: p.name,
+              category: p.category,
+              aliases: p.aliases || [],
+              x: p.position[0],
+              y: p.position[1],
+              z: p.position[2],
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+  }, [currentScene?.id, setPOIs])
+
+  // 3. Navigate to a POI: computes route and draws 3D ribbon
+  const handleNavigateToPOI = useCallback(
+    async (poi) => {
+      selectPOI(poi)
+      const targetPos = [poi.x, poi.y, poi.z]
+
+      // Determine current player / camera position
+      const activeNode = tourData?.nodes?.find((n) => n.id === activeNodeId) || tourData?.nodes?.[0]
+      const currentPos = activeNode ? activeNode.position : [0, 1.65, 0]
+
+      try {
+        const sceneId = currentScene?.id || 5
+        const res = await fetch(`/api/scenes/${sceneId}/route`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            start: currentPos,
+            goal: targetPos,
+          }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.path && data.path.length > 0) {
+            setPath(data.path)
           }
-        })
-        .catch(() => {
-          setTourData(null)
-          setTourMode('splat')
-        })
-    } else {
-      setTourData(null)
-      setTourMode('splat')
-    }
-  }, [currentScene])
+        } else {
+          // Fallback direct path line
+          setPath([currentPos, targetPos])
+        }
+      } catch (err) {
+        setPath([currentPos, targetPos])
+      }
 
-  const handleSelect = useCallback((poi) => {
-    selectPOI(poi)
-    // If in tour mode, find closest photosphere node to the POI
-    if (tourData?.nodes) {
-      let closestNode = null
-      let minDist = Infinity
-      for (const n of tourData.nodes) {
-        const dx = n.position[0] - poi.x
-        const dz = n.position[2] - poi.z
-        const d = dx * dx + dz * dz
-        if (d < minDist) {
-          minDist = d
-          closestNode = n
+      // Jump camera closer to target node if in photosphere mode
+      if (tourData?.nodes) {
+        let closest = null
+        let minDist = Infinity
+        for (const n of tourData.nodes) {
+          const d = Math.hypot(n.position[0] - poi.x, n.position[2] - poi.z)
+          if (d < minDist) {
+            minDist = d
+            closest = n
+          }
+        }
+        if (closest && closest.id !== activeNodeId) {
+          setActiveNodeId(closest.id)
         }
       }
-      if (closestNode) {
-        setActiveNodeId(closestNode.id)
-        setTourMode('photosphere')
-      }
-    }
-  }, [selectPOI, tourData])
+    },
+    [currentScene?.id, tourData, activeNodeId, selectPOI, setPath, setActiveNodeId]
+  )
 
-  const handlePlace = useCallback((position) => {
-    if (onPOIPlace) onPOIPlace(position)
-  }, [onPOIPlace])
+  const handlePOISelect = useCallback(
+    (poi) => {
+      handleNavigateToPOI(poi)
+    },
+    [handleNavigateToPOI]
+  )
 
-  const activeNode = tourData?.nodes?.find(n => n.id === activeNodeId) || tourData?.nodes?.[0]
-  const orbitTarget = (tourMode === 'photosphere' && activeNode)
-    ? [activeNode.position[0], 1.65, activeNode.position[2] + 0.01]
-    : [0, 0.8, 1.5]
+  const handlePlace = useCallback(
+    (pos) => {
+      if (onPOIPlace) onPOIPlace(pos)
+    },
+    [onPOIPlace]
+  )
+
+  // Asset URLs
+  const tourBasePath = tourData?.meta?.base_url || '/static/panoramas/sample_scene'
+  const proxyMeshUrl = `${tourBasePath}/mesh/proxy.glb`
+  const navmeshUrl = `${tourBasePath}/mesh/navmesh.glb`
+  const navgridUrl = `${tourBasePath}/nav/navgrid.json`
+  const splatUrl = currentScene?.splat_path || '/static/models/scene.splat'
+
+  const activeNode = tourData?.nodes?.find((n) => n.id === activeNodeId) || tourData?.nodes?.[0]
+  const dollhouseTarget = activeNode ? [activeNode.position[0], 0.5, activeNode.position[2]] : [0, 0.5, 0]
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {/* View Switcher Toolbar */}
-      <div style={{
-        position: 'absolute',
-        top: 14,
-        left: 14,
-        zIndex: 20,
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 8,
-      }}>
-        {/* Photosphere / Dollhouse / Splat Mode Switcher */}
-        {tourData && (
-          <div style={{
+    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+      {/* ── Top Floating Navigation & Mode Bar ── */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 14,
+          left: 14,
+          zIndex: 25,
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 10,
+          alignItems: 'center',
+        }}
+      >
+        {/* Mode Selector Pill */}
+        <div
+          style={{
             display: 'flex',
             gap: 4,
-            background: 'rgba(10, 20, 35, 0.9)',
-            padding: 3,
+            background: 'rgba(10, 20, 35, 0.92)',
+            padding: 4,
             borderRadius: 8,
             border: '1px solid #1e3a5f',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
             backdropFilter: 'blur(8px)',
-          }}>
-            <button
-              onClick={() => setTourMode('photosphere')}
-              style={{
-                background: tourMode === 'photosphere' ? '#00e5ff' : 'transparent',
-                color: tourMode === 'photosphere' ? '#0a101d' : '#00e5ff',
-                border: 'none',
-                borderRadius: 6,
-                padding: '6px 12px',
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              👁️ Photosphere POV
-            </button>
-            <button
-              onClick={() => setTourMode('dollhouse')}
-              style={{
-                background: tourMode === 'dollhouse' ? '#00e5ff' : 'transparent',
-                color: tourMode === 'dollhouse' ? '#0a101d' : '#00e5ff',
-                border: 'none',
-                borderRadius: 6,
-                padding: '6px 12px',
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              🏠 3D Dollhouse
-            </button>
-            <button
-              onClick={() => setTourMode('splat')}
-              style={{
-                background: tourMode === 'splat' ? '#00e5ff' : 'transparent',
-                color: tourMode === 'splat' ? '#0a101d' : '#00e5ff',
-                border: 'none',
-                borderRadius: 6,
-                padding: '6px 12px',
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              ✨ 3DGS Splats
-            </button>
-          </div>
-        )}
-
-        {/* Orbit / FPS Control Toggle (for Dollhouse & Splat views) */}
-        {tourMode !== 'photosphere' && (
+          }}
+        >
           <button
-            onClick={() => setControlType(c => c === 'fps' ? 'orbit' : 'fps')}
+            onClick={() => setTourMode('photosphere')}
             style={{
-              background: 'rgba(10, 20, 35, 0.85)',
-              border: '1px solid #00bfff',
-              borderRadius: 8,
-              color: '#00bfff',
-              padding: '7px 14px',
+              background: tourMode === 'photosphere' ? '#00e5ff' : 'transparent',
+              color: tourMode === 'photosphere' ? '#0a101d' : '#00e5ff',
+              border: 'none',
+              borderRadius: 6,
+              padding: '6px 12px',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
-              backdropFilter: 'blur(8px)',
+              transition: 'all 0.15s',
             }}
           >
-            {controlType === 'fps' ? '🕹️ WASD Roam' : '🔄 Orbit View'}
+            👁️ Photosphere POV
           </button>
-        )}
-
-        {/* Orientation & Rotation Controls Toolbar */}
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button
-            onClick={handleRotateLeft}
-            title="Rotate 90 degrees to the left (counter-clockwise)"
+            onClick={() => setTourMode('freeroam')}
             style={{
-              background: 'rgba(10, 20, 35, 0.85)',
-              border: '1px solid #00e5ff',
-              borderRadius: 8,
-              color: '#00e5ff',
-              padding: '7px 12px',
+              background: tourMode === 'freeroam' ? '#00e5ff' : 'transparent',
+              color: tourMode === 'freeroam' ? '#0a101d' : '#00e5ff',
+              border: 'none',
+              borderRadius: 6,
+              padding: '6px 12px',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
-              backdropFilter: 'blur(8px)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
+              transition: 'all 0.15s',
             }}
           >
-            ↺ Rotate Left 90°
+            🚶 Free-Roam 3D
           </button>
           <button
-            onClick={handleRotateRight}
-            title="Rotate 90 degrees to the right (clockwise)"
+            onClick={() => setTourMode('dollhouse')}
             style={{
-              background: 'rgba(10, 20, 35, 0.85)',
-              border: '1px solid #00e5ff',
-              borderRadius: 8,
-              color: '#00e5ff',
-              padding: '7px 12px',
+              background: tourMode === 'dollhouse' ? '#00e5ff' : 'transparent',
+              color: tourMode === 'dollhouse' ? '#0a101d' : '#00e5ff',
+              border: 'none',
+              borderRadius: 6,
+              padding: '6px 12px',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
-              backdropFilter: 'blur(8px)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
+              transition: 'all 0.15s',
             }}
           >
-            ↻ Rotate Right 90°
+            🏠 3D Dollhouse
           </button>
           <button
-            onClick={() => setInvertY(v => !v)}
-            title="Flip 180 degrees upside down"
+            onClick={() => setTourMode('splat')}
             style={{
-              background: 'rgba(10, 20, 35, 0.85)',
-              border: '1px solid #ff9900',
-              borderRadius: 8,
-              color: '#ffaa00',
-              padding: '7px 12px',
+              background: tourMode === 'splat' ? '#00e5ff' : 'transparent',
+              color: tourMode === 'splat' ? '#0a101d' : '#88a0b5',
+              border: 'none',
+              borderRadius: 6,
+              padding: '6px 12px',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
-              backdropFilter: 'blur(8px)',
+              transition: 'all 0.15s',
             }}
           >
-            {invertY ? '🔄 Inverted' : '⬆️ Upright'}
+            ✨ Photoreal (3DGS)
           </button>
-          {(rotationZ !== 0 || rotationX !== 0 || invertY) && (
-            <button
-              onClick={handleReset}
-              title="Reset rotation to 0°"
-              style={{
-                background: 'rgba(30, 20, 20, 0.85)',
-                border: '1px solid #ff4444',
-                borderRadius: 8,
-                color: '#ff6666',
-                padding: '7px 10px',
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: 'pointer',
-                backdropFilter: 'blur(8px)',
-              }}
-            >
-              Reset ({(Math.round((rotationZ * 180) / Math.PI) + 360) % 360}°)
-            </button>
-          )}
+          <button
+            onClick={() => setShowAR(true)}
+            style={{
+              background: 'transparent',
+              color: '#00ffcc',
+              border: 'none',
+              borderRadius: 6,
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            📱 AR Companion
+          </button>
         </div>
 
-        {/* Active room indicator badge in Photosphere mode */}
-        {tourMode === 'photosphere' && activeNode && (
-          <div style={{
-            background: 'rgba(10, 25, 45, 0.9)',
-            border: '1px solid #00e5ff',
-            borderRadius: 8,
-            color: '#ffffff',
-            padding: '7px 14px',
-            fontSize: 12,
-            fontWeight: 700,
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}>
-            <span style={{ color: '#00e5ff' }}>📍 Current Room:</span> {activeNode.name}
-          </div>
+        {/* Collision Toggle (In Free-Roam Mode) */}
+        {tourMode === 'freeroam' && (
+          <button
+            onClick={() => setCollisionEnabled(!collisionEnabled)}
+            style={{
+              background: collisionEnabled ? 'rgba(0, 229, 255, 0.15)' : 'rgba(255, 60, 60, 0.2)',
+              color: collisionEnabled ? '#00e5ff' : '#ff5555',
+              border: `1px solid ${collisionEnabled ? '#00e5ff' : '#ff5555'}`,
+              borderRadius: 8,
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            {collisionEnabled ? '🛡️ Navmesh Collision: ON' : '⚠️ Collision: OFF (Fly)'}
+          </button>
         )}
+
+        {/* POI Search Bar with Fuse.js */}
+        <POISearchBar onNavigateToPOI={handleNavigateToPOI} />
       </div>
 
+      {/* ── 3D Canvas Viewport ── */}
       <Canvas
-        camera={{
-          fov: tourMode === 'photosphere' ? 75 : 70,
-          near: 0.1,
-          far: 200,
-          position: tourMode === 'photosphere' && activeNode
-            ? [activeNode.position[0], 1.65, activeNode.position[2]]
-            : [0, CAMERA_HEIGHT, -4]
-        }}
-        style={{ background: '#080c14' }}
-        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+        camera={{ position: [0, 1.65, 0], fov: 75, near: 0.1, far: 200 }}
+        style={{ background: '#0a0e14' }}
       >
-        {/* Environment Lights */}
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[5, 12, 5]} intensity={1.0} />
-        <hemisphereLight skyColor="#1a2a4a" groundColor="#0a0a0a" intensity={0.4} />
+        <ambientLight intensity={0.9} />
+        <directionalLight position={[10, 20, 10]} intensity={1.2} />
 
-        {/* Floor Grid (hidden in human photosphere POV for pure realism) */}
-        {tourMode !== 'photosphere' && <FloorGrid />}
-
-        {/* Matterport / Google Street View Style Photosphere Tour */}
-        {tourData && (tourMode === 'photosphere' || tourMode === 'dollhouse') && (
+        {/* 1. Photosphere Tour Mode */}
+        {tourMode === 'photosphere' && tourData && (
           <PhotosphereTour
             tourData={tourData}
             activeNodeId={activeNodeId}
             onNodeChange={setActiveNodeId}
-            isDollhouse={tourMode === 'dollhouse'}
-            onEnterPOV={() => setTourMode('photosphere')}
+            isDollhouse={false}
             rotationZ={rotationZ}
             rotationX={rotationX}
           />
         )}
 
-        {/* 3D Gaussian Splats View */}
+        {/* 2. Free-Roam First-Person Mode */}
+        {tourMode === 'freeroam' && (
+          <>
+            <FreeRoamControls enabled={true} navmeshUrl={navmeshUrl} />
+            <Suspense fallback={null}>
+              <ProxyMeshView url={proxyMeshUrl} mode="freeroam" />
+            </Suspense>
+          </>
+        )}
+
+        {/* 3. Dollhouse Orbit Mode */}
+        {tourMode === 'dollhouse' && (
+          <>
+            <OrbitControls
+              target={dollhouseTarget}
+              maxPolarAngle={Math.PI / 2 - 0.05}
+              minDistance={2}
+              maxDistance={35}
+              enableDamping
+              dampingFactor={0.08}
+            />
+            <Suspense fallback={null}>
+              <ProxyMeshView url={proxyMeshUrl} mode="dollhouse" />
+            </Suspense>
+            {tourData && (
+              <PhotosphereTour
+                tourData={tourData}
+                activeNodeId={activeNodeId}
+                onNodeChange={setActiveNodeId}
+                isDollhouse={true}
+                onEnterPOV={() => setTourMode('photosphere')}
+              />
+            )}
+          </>
+        )}
+
+        {/* 4. Optional Photoreal 3DGS Mode (Lazy Loaded) */}
         {tourMode === 'splat' && (
-          <PhotorealisticSplat
-            key={`${currentScene?.id || 'default'}-${splatUrl}-${invertY}-${rotationZ}-${rotationX}`}
-            sceneId={currentScene?.id}
-            splatUrl={splatUrl}
-            invertY={invertY}
-            rotationZ={rotationZ}
-            rotationX={rotationX}
-          />
+          <>
+            <OrbitControls target={[0, 1.2, 0]} enableDamping dampingFactor={0.08} />
+            <PhotorealisticSplat splatUrl={splatUrl} rotationZ={rotationZ} rotationX={rotationX} />
+          </>
         )}
 
-        {/* POI Markers (shown in Dollhouse & Splat modes) */}
-        {tourMode !== 'photosphere' && <POIMarkers pois={pois} onSelect={handleSelect} />}
-
-        {/* A* Navigation Path */}
-        {navigationPath && <NavigationPath path={navigationPath} />}
-
-        {/* Camera Controls */}
-        {controlType === 'fps' && tourMode !== 'photosphere' ? (
-          <FirstPersonControls enabled={mode === 'roam'} />
-        ) : (
-          <OrbitControls
-            makeDefault
-            enableDamping
-            dampingFactor={0.05}
-            target={orbitTarget}
-            maxPolarAngle={tourMode === 'photosphere' ? Math.PI : Math.PI / 2 + 0.1}
-            minDistance={tourMode === 'photosphere' ? 0.01 : 0.5}
-            maxDistance={tourMode === 'photosphere' ? 0.2 : 50}
-          />
-        )}
-
-        {/* POI placement handler (active in poi-select mode) */}
-        {mode === 'poi-select' && <POIPlacementHandler onPlace={handlePlace} />}
+        {/* Interactive Floor Markers & Navigation Ribbon */}
+        <POIMarkers pois={pois} onSelect={handlePOISelect} />
+        <NavigationPath path={navigationPath} />
+        <FloorGrid />
+        <POIPlacementHandler onPlace={handlePlace} />
       </Canvas>
+
+      {/* ── Milestone M8: GTA-Style Radar Minimap ── */}
+      <Minimap navgridUrl={navgridUrl} />
+
+      {/* ── Mode Help Overlay Pill ── */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 16,
+          left: 16,
+          background: 'rgba(10, 20, 35, 0.85)',
+          padding: '6px 12px',
+          borderRadius: 6,
+          fontSize: 11,
+          color: '#88a0b5',
+          border: '1px solid rgba(255,255,255,0.08)',
+          pointerEvents: 'none',
+        }}
+      >
+        {tourMode === 'photosphere' && '🖱️ Drag to look | Click glowing floor pucks to travel | Double-click to drop POI'}
+        {tourMode === 'freeroam' && '⌨️ WASD to walk | Shift to sprint | Mouse to look | Collision clamped to navmesh'}
+        {tourMode === 'dollhouse' && '🖱️ Left-drag orbit | Right-drag pan | Scroll zoom | Click node or double-click to enter POV'}
+        {tourMode === 'splat' && '✨ 3D Gaussian Splatting Photoreal Mode | Orbit around capture volume'}
+      </div>
+
+      {/* ── WebXR / 2D Compass AR Companion Modal ── */}
+      {showAR && <ARCompanion onClose={() => setShowAR(false)} />}
     </div>
   )
 }
