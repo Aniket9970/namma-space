@@ -26,6 +26,7 @@ function useProgressiveTexture(lodUrl, highResUrl) {
         if (!isMounted) return
         lodTex.wrapS = THREE.RepeatWrapping
         lodTex.repeat.x = -1
+        lodTex.colorSpace = THREE.SRGBColorSpace
         lodTex.needsUpdate = true
         textureCache.set(lodUrl, lodTex)
         if (!textureCache.has(highResUrl)) {
@@ -40,6 +41,7 @@ function useProgressiveTexture(lodUrl, highResUrl) {
         if (!isMounted) return
         highTex.wrapS = THREE.RepeatWrapping
         highTex.repeat.x = -1
+        highTex.colorSpace = THREE.SRGBColorSpace
         highTex.needsUpdate = true
         textureCache.set(highResUrl, highTex)
         setTexture(highTex)
@@ -58,18 +60,20 @@ function useProgressiveTexture(lodUrl, highResUrl) {
 function SpherePanorama({ lodUrl, highResUrl, opacity = 1.0, rotationZ = 0, rotationX = 0 }) {
   const texture = useProgressiveTexture(lodUrl, highResUrl)
 
-  if (!texture) return null
-
   return (
     <mesh rotation={[rotationX, 0, rotationZ]}>
       <sphereGeometry args={[30, 60, 40]} />
-      <meshBasicMaterial
-        map={texture}
-        side={THREE.BackSide}
-        transparent={opacity < 1.0}
-        opacity={opacity}
-        depthWrite={false}
-      />
+      {texture ? (
+        <meshBasicMaterial
+          map={texture}
+          side={THREE.BackSide}
+          transparent={opacity < 1.0}
+          opacity={opacity}
+          depthWrite={false}
+        />
+      ) : (
+        <meshBasicMaterial color="#141a24" side={THREE.BackSide} />
+      )}
     </mesh>
   )
 }

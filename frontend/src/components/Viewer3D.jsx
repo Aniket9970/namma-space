@@ -163,6 +163,63 @@ function POIPlacementHandler({ onPlace }) {
   return null
 }
 
+// ── Street View Style Mouse Look for Photosphere ──────────────────────────────
+function PanoramaCameraLook({ activePos }) {
+  const { camera, gl } = useThree()
+  const isDragging = useRef(false)
+  const prevMouse = useRef({ x: 0, y: 0 })
+  const lonRef = useRef(0)
+  const latRef = useRef(0)
+
+  useEffect(() => {
+    if (activePos) {
+      camera.position.set(activePos[0], activePos[1] || 1.65, activePos[2])
+    }
+  }, [activePos, camera])
+
+  useEffect(() => {
+    const canvas = gl.domElement
+    const onMouseDown = (e) => {
+      if (e.button !== 0) return
+      isDragging.current = true
+      prevMouse.current = { x: e.clientX, y: e.clientY }
+    }
+    const onMouseMove = (e) => {
+      if (!isDragging.current) return
+      const dx = e.clientX - prevMouse.current.x
+      const dy = e.clientY - prevMouse.current.y
+      prevMouse.current = { x: e.clientX, y: e.clientY }
+
+      lonRef.current -= dx * 0.25
+      latRef.current = Math.max(-85, Math.min(85, latRef.current + dy * 0.25))
+
+      const phi = THREE.MathUtils.degToRad(90 - latRef.current)
+      const theta = THREE.MathUtils.degToRad(lonRef.current)
+
+      const target = new THREE.Vector3(
+        camera.position.x + 100 * Math.sin(phi) * Math.sin(theta),
+        camera.position.y + 100 * Math.cos(phi),
+        camera.position.z - 100 * Math.sin(phi) * Math.cos(theta)
+      )
+      camera.lookAt(target)
+    }
+    const onMouseUp = () => {
+      isDragging.current = false
+    }
+
+    canvas.addEventListener('mousedown', onMouseDown)
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      canvas.removeEventListener('mousedown', onMouseDown)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [camera, gl])
+
+  return null
+}
+
 // ── Lazy Photoreal Splat Component ────────────────────────────────────────────
 function PhotorealisticSplat({ splatUrl, rotationZ = 0, rotationX = 0 }) {
   if (!splatUrl) return null
@@ -470,24 +527,25 @@ export default function Viewer3D({ onPOIPlace }) {
 
         {/* 1. Photosphere Tour Mode */}
         {tourMode === 'photosphere' && tourData && (
-          <PhotosphereTour
-            tourData={tourData}
-            activeNodeId={activeNodeId}
-            onNodeChange={setActiveNodeId}
-            isDollhouse={false}
-            rotationZ={rotationZ}
-            rotationX={rotationX}
-          />
+          <>
+            <PanoramaCameraLook activePos={activeNode?.position} />
+            <PhotosphereTour
+              tourData={tourData}
+              activeNodeId={activeNodeId}
+              onNodeChange={setActiveNodeId}
+              isDollhouse={false}
+              rotationZ={rotationZ}
+              rotationX={rotationX}
+            />
+          </>
         )}
 
         {/* 2. Free-Roam First-Person Mode */}
         {tourMode === 'freeroam' && (
-          <>
+          <Suspense fallback={null}>
             <FreeRoamControls enabled={true} navmeshUrl={navmeshUrl} />
-            <Suspense fallback={null}>
-              <ProxyMeshView url={proxyMeshUrl} mode="freeroam" />
-            </Suspense>
-          </>
+            <ProxyMeshView url={proxyMeshUrl} mode="freeroam" />
+          </Suspense>
         )}
 
         {/* 3. Dollhouse Orbit Mode */}
