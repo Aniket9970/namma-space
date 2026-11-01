@@ -477,24 +477,29 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
   const [invertY, setInvertY] = useState(false)
 
   // Orientation offsets
-  const isRoomvid = currentScene?.name?.toLowerCase().includes('roomvid')
-  const [rotationZ, setRotationZ] = useState(isRoomvid ? Math.PI / 2 : 0)
+  const getInitialRotZ = (scene) => {
+    if (scene?.name?.toLowerCase().includes('roomvid')) return Math.PI / 2
+    if (scene?.name?.toLowerCase().includes('ex4') || !scene) return (3 * Math.PI) / 2 // 90° right by default for Ex4
+    return 0
+  }
+
+  const [rotationZ, setRotationZ] = useState(() => getInitialRotZ(currentScene))
   const [rotationX, setRotationX] = useState(0)
 
   // Sync orientation on scene switch
   useEffect(() => {
-    if (currentScene?.name?.toLowerCase().includes('roomvid')) {
-      setRotationZ(Math.PI / 2)
-      setRotationX(0)
-    } else {
-      setRotationZ(0)
-      setRotationX(0)
-    }
-  }, [currentScene?.id])
+    setRotationZ(getInitialRotZ(currentScene))
+    setRotationX(0)
+    setInvertY(false)
+  }, [currentScene?.id, currentScene?.name])
 
   const handleRotateLeft = () => setRotationZ((prev) => (prev + Math.PI / 2) % (2 * Math.PI))
   const handleRotateRight = () => setRotationZ((prev) => (prev - Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI))
-  const handleResetRotation = () => { setRotationZ(0); setRotationX(0); setInvertY(false) }
+  const handleResetRotation = () => {
+    setRotationZ(getInitialRotZ(currentScene))
+    setRotationX(0)
+    setInvertY(false)
+  }
 
   // Load POIs when scene changes
   useEffect(() => {
@@ -716,24 +721,22 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
           >
             ↺ 90°
           </button>
-          {!isMobile && (
-            <button
-              onClick={handleRotateRight}
-              title="Rotate 90 degrees right"
-              style={{
-                background: 'transparent',
-                color: '#00e5ff',
-                border: 'none',
-                borderRadius: 6,
-                padding: '6px 10px',
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              ↻ 90°
-            </button>
-          )}
+          <button
+            onClick={handleRotateRight}
+            title="Rotate 90 degrees right"
+            style={{
+              background: 'transparent',
+              color: '#00e5ff',
+              border: 'none',
+              borderRadius: 6,
+              padding: isMobile ? '4px 6px' : '6px 10px',
+              fontSize: isMobile ? 11 : 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            ↻ 90°
+          </button>
           <button
             onClick={() => setInvertY((v) => !v)}
             title="Flip 180 degrees upright / inverted"
@@ -750,7 +753,7 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
           >
             {invertY ? '🔄 Invert' : '⬆️ Upright'}
           </button>
-          {(rotationZ !== 0 || rotationX !== 0 || invertY) && (
+          {(rotationZ !== getInitialRotZ(currentScene) || rotationX !== 0 || invertY) && (
             <button
               onClick={handleResetRotation}
               title="Reset orientation"

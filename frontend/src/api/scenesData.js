@@ -41,26 +41,6 @@ export const DEFAULT_SCENES = [
     "created_at": "2026-10-31T20:12:08.110089+00:00"
   },
   {
-    "id": 6,
-    "name": "Ex1 Scene",
-    "glb_path": "/static/models/ex1.glb",
-    "splat_path": "/static/models/ex1.splat",
-    "grid_path": "/static/navigation/ex1_grid.npy",
-    "grid_meta_json": "{\n  \"origin\": [\n    -12.74068546295166,\n    -12.340456008911133\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 247,\n  \"cols\": 255,\n  \"floor_y\": 0.0\n}",
-    "tour_path": "/static/panoramas/ex1/tour.json",
-    "created_at": "2026-10-31T18:29:21.590877+00:00"
-  },
-  {
-    "id": 5,
-    "name": "Sample Scene Scene",
-    "glb_path": "/static/models/sample_scene.glb",
-    "splat_path": "/static/models/sample_scene.splat",
-    "grid_path": "/static/navigation/sample_scene_grid.npy",
-    "grid_meta_json": null,
-    "tour_path": "/static/panoramas/sample_scene/tour.json",
-    "created_at": "2026-10-30T19:26:15.670021+00:00"
-  },
-  {
     "id": 4,
     "name": "Roomvid Scene",
     "glb_path": "/static/models/roomvid.glb",
@@ -69,46 +49,6 @@ export const DEFAULT_SCENES = [
     "grid_meta_json": "{\n  \"origin\": [\n    -6.657234191894531,\n    -10.359014511108398\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 208,\n  \"cols\": 134,\n  \"floor_y\": 0.0\n}",
     "tour_path": "/static/panoramas/roomvid/tour.json",
     "created_at": "2026-10-30T17:42:34.792420+00:00"
-  },
-  {
-    "id": 3,
-    "name": "60Fps Scene",
-    "glb_path": "/static/models/60fps.glb",
-    "splat_path": "/static/models/60fps.splat",
-    "grid_path": "/static/navigation/60fps_grid.npy",
-    "grid_meta_json": "{\n  \"origin\": [\n    -20.389633178710938,\n    -33.2848014831543\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 666,\n  \"cols\": 408,\n  \"floor_y\": 0.0\n}",
-    "tour_path": "/static/panoramas/60fps/tour.json",
-    "created_at": "2026-10-30T12:33:06.413132+00:00"
-  },
-  {
-    "id": 2,
-    "name": "Apt Video Scene",
-    "glb_path": "/static/models/apt_video.glb",
-    "splat_path": "/static/models/apt_video.splat",
-    "grid_path": "/static/navigation/apt_video_grid.npy",
-    "grid_meta_json": "{\n  \"origin\": [\n    -12.789498329162598,\n    -10.257213592529297\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 206,\n  \"cols\": 256,\n  \"floor_y\": 0.0\n}",
-    "tour_path": "/static/panoramas/apt_video/tour.json",
-    "created_at": "2026-10-30T09:40:05.885556+00:00"
-  },
-  {
-    "id": 1,
-    "name": "Indoor Tour Scene",
-    "glb_path": "/static/models/scene.glb",
-    "splat_path": "/static/models/indoor_tour.splat",
-    "grid_path": "/static/navigation/grid.npy",
-    "grid_meta_json": "{\n  \"origin\": [\n    -3.9263551235198975,\n    -3.549999952316284\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 71,\n  \"cols\": 79,\n  \"floor_y\": 0.0\n}",
-    "tour_path": "/static/panoramas/indoor_tour/tour.json",
-    "created_at": "2026-10-26T19:54:55.947363+00:00"
-  },
-  {
-    "id": 11,
-    "name": "Physical Smartphone Capture (Techfest IIT Bombay)",
-    "glb_path": "/static/models/sample_scene.glb",
-    "splat_path": "/static/models/model.splat",
-    "grid_path": "/static/navigation/sample_scene_grid.npy",
-    "grid_meta_json": "{\n  \"origin\": [\n    -15.0,\n    -15.0\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 300,\n  \"cols\": 300,\n  \"floor_y\": 0.0\n}",
-    "tour_path": "/static/panoramas/techfest/tour.json",
-    "created_at": "2026-11-01T12:00:00.000000+00:00"
   },
   {
     "id": 12,
@@ -123,105 +63,7 @@ export const DEFAULT_SCENES = [
 ];
 
 export const DEFAULT_POIS = [
-  {
-    "id": 1,
-    "scene_id": 1,
-    "name": "Room Center",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 0.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 2,
-    "scene_id": 1,
-    "name": "Viewing Spot",
-    "description": "Primary observation spot",
-    "x": 1.2,
-    "y": 0.0,
-    "z": -1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 3,
-    "scene_id": 1,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.5,
-    "y": 0.0,
-    "z": 1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 4,
-    "scene_id": 2,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 5,
-    "scene_id": 2,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 6,
-    "scene_id": 2,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 7,
-    "scene_id": 3,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 8,
-    "scene_id": 3,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 9,
-    "scene_id": 3,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
+  // Scene 4: Roomvid Scene
   {
     "id": 10,
     "scene_id": 4,
@@ -255,39 +97,7 @@ export const DEFAULT_POIS = [
     "grid_row": null,
     "grid_col": null
   },
-  {
-    "id": 13,
-    "scene_id": 6,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 14,
-    "scene_id": 6,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 15,
-    "scene_id": 6,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
+  // Scene 7: Ex2 Scene
   {
     "id": 16,
     "scene_id": 7,
@@ -321,6 +131,7 @@ export const DEFAULT_POIS = [
     "grid_row": null,
     "grid_col": null
   },
+  // Scene 8: Tour Video Scene
   {
     "id": 19,
     "scene_id": 8,
@@ -354,6 +165,7 @@ export const DEFAULT_POIS = [
     "grid_row": null,
     "grid_col": null
   },
+  // Scene 9: Ex3 Scene
   {
     "id": 22,
     "scene_id": 9,
@@ -387,6 +199,7 @@ export const DEFAULT_POIS = [
     "grid_row": null,
     "grid_col": null
   },
+  // Scene 10: Ex4 Scene (Primary Default)
   {
     "id": 25,
     "scene_id": 10,
@@ -420,39 +233,7 @@ export const DEFAULT_POIS = [
     "grid_row": null,
     "grid_col": null
   },
-  {
-    "id": 101,
-    "scene_id": 11,
-    "name": "Main Entrance",
-    "description": "Primary entryway for smartphone capture inspection",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 102,
-    "scene_id": 11,
-    "name": "Center Hall",
-    "description": "Central roam area of reconstructed 3D space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 0.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 103,
-    "scene_id": 11,
-    "name": "Feature Display Area",
-    "description": "Key interest zone with detailed point density",
-    "x": -1.5,
-    "y": 0.0,
-    "z": -1.8,
-    "grid_row": null,
-    "grid_col": null
-  },
+  // Scene 12: Apartment Scene
   {
     "id": 104,
     "scene_id": 12,
