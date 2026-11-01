@@ -99,6 +99,11 @@ class SplatStage(BaseStage):
         iters = str(config.photoreal_splat.iterations)
         r_scale = str(config.photoreal_splat.resolution_scale)
         device = config.photoreal_splat.data_device
+        densify_thresh = str(config.photoreal_splat.densify_grad_threshold)
+        sh_deg = str(config.photoreal_splat.sh_degree)
+
+        # Allow 80-90% safe VRAM allocation on Windows without heap fragmentation
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
         cmd = [
             sys.executable, str(train_py),
@@ -108,9 +113,11 @@ class SplatStage(BaseStage):
             "--save_iterations", iters,
             "--data_device", device,
             "-r", r_scale,
+            "--densify_grad_threshold", densify_thresh,
+            "--sh_degree", sh_deg,
             "--disable_viewer",
         ]
-        print(f"\n--- Launching 3DGS Training ({iters} iters, data_device={device}) ---")
+        print(f"\n--- Launching 3DGS High-Precision Training ({iters} iters, scale=1:{r_scale}, densify_thresh={densify_thresh}) ---")
         res = subprocess.run(cmd, cwd=str(gs_repo))
         if res.returncode == 0:
             ply_candidates = list((splat_out / "point_cloud").rglob("point_cloud.ply"))

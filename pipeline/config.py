@@ -33,9 +33,9 @@ class FrameSamplingConfig:
 class ColmapConfig:
     camera_model: str = "SIMPLE_RADIAL"
     single_camera: bool = True
-    feature_max_size: int = 1200
+    feature_max_size: int = 1600
     max_features: int = 8192
-    num_threads: int = 8
+    num_threads: int = 12
     matching_overlap: int = 15
     use_gpu: bool = False
 
@@ -99,9 +99,11 @@ class NavigationConfig:
 @dataclass
 class PhotorealSplatConfig:
     enabled: bool = True
-    iterations: int = 7000
+    iterations: int = 10000
     data_device: str = "cpu"
-    resolution_scale: int = 2
+    resolution_scale: int = -1
+    densify_grad_threshold: float = 0.0002
+    sh_degree: int = 3
 
 
 @dataclass

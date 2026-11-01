@@ -1,0 +1,42 @@
+[
+  {
+    "id": 10,
+    "name": "Ex4 Scene (Showcase Room)",
+    "glb_path": "/static/models/ex4.glb",
+    "splat_path": "/static/models/ex4.splat",
+    "grid_path": "/static/navigation/ex4_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -10.0,\n    -10.0\n  ],\n  \"cell_size\": 0.05,\n  \"rows\": 200,\n  \"cols\": 200\n}"
+  },
+  {
+    "id": 9,
+    "name": "Ex3 Scene (Corridor)",
+    "glb_path": "/static/models/ex3.glb",
+    "splat_path": "/static/models/ex3.splat",
+    "grid_path": "/static/navigation/ex3_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -8.0,\n    -8.0\n  ],\n  \"cell_size\": 0.05,\n  \"rows\": 160,\n  \"cols\": 160\n}"
+  },
+  {
+    "id": 7,
+    "name": "Ex2 Scene (Bedroom & Balcony)",
+    "glb_path": "/static/models/ex2.glb",
+    "splat_path": "/static/models/ex2.splat",
+    "grid_path": "/static/navigation/ex2_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -8.0,\n    -8.0\n  ],\n  \"cell_size\": 0.05,\n  \"rows\": 160,\n  \"cols\": 160\n}"
+  },
+  {
+    "id": 6,
+    "name": "Ex1 Scene (Workstation Studio)",
+    "glb_path": "/static/models/ex1.glb",
+    "splat_path": "/static/models/ex1.splat",
+    "grid_path": "/static/navigation/ex1_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -12.0,\n    -12.0\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 240,\n  \"cols\": 240\n}"
+  },
+  {
+    "id": 5,
+    "name": "Sample Scene",
+    "glb_path": "/static/models/sample_scene.glb",
+    "splat_path": "/static/models/sample_scene.splat",
+    "grid_path": "/static/navigation/sample_scene_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -5.0,\n    -5.0\n  ],\n  \"cell_size\": 0.05,\n  \"rows\": 100,\n  \"cols\": 100\n}"
+  }
+]

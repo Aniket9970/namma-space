@@ -34,20 +34,33 @@ frontend/.vite/
 *.sqlite
 *.sqlite3
 
-# Models and large binary outputs (add your own locally)
-backend/static/models/*.glb
-backend/static/models/*.splat
-backend/static/models/*.ply
+# Models and large binary outputs
+backend/static/models/
 backend/static/navigation/*.npy
-backend/static/panoramas/*/*.jpg
-*.ply
+backend/static/panoramas/
+frontend/public/static/models/*.splat
+frontend/public/static/models/*.glb
+frontend/public/static/navigation/*.npy
 
-# Third party clones & external repos
-gaussian-splatting/
+# Allow showcase models for Vercel deployment (<30MB)
+!frontend/public/static/models/sample_scene.splat
+!frontend/public/static/models/sample_scene.glb
+!frontend/public/static/models/ex4.splat
+!frontend/public/static/models/ex4.glb
+!frontend/public/static/navigation/ex4_grid.npy
+!frontend/public/static/navigation/occupancy_meta.json
 
-# Pipeline & reconstruction outputs
+# Reconstruction & test outputs
 reconstruction/output/
 out/
+gaussian-splatting/
+test/sample_out/
+test/bench_poses/
+test/stage_test_out/
+*.zip
+*.tar.gz
+*.MOV
+*.mp4
 
 # OS
 .DS_Store

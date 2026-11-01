@@ -107,8 +107,8 @@ def step_colmap():
          "--ImageReader.single_camera", "1",
          "--ImageReader.camera_model", "SIMPLE_RADIAL",
          "--FeatureExtraction.use_gpu", "0",
-         "--FeatureExtraction.num_threads", "8",
-         "--FeatureExtraction.max_image_size", "1200",
+         "--FeatureExtraction.num_threads", "12",
+         "--FeatureExtraction.max_image_size", "1600",
          "--SiftExtraction.max_num_features", "8192"],
         "Step 3a/7 - COLMAP: Feature extraction"
     )
@@ -116,8 +116,8 @@ def step_colmap():
         [colmap_exe, "sequential_matcher",
          "--database_path", str(db),
          "--FeatureMatching.use_gpu", "0",
-         "--FeatureMatching.num_threads", "8",
-         "--SequentialMatching.num_threads", "8",
+         "--FeatureMatching.num_threads", "12",
+         "--SequentialMatching.num_threads", "12",
          "--SequentialMatching.overlap", "15"],
         "Step 3b/7 - COLMAP: Feature matching"
     )
@@ -126,7 +126,7 @@ def step_colmap():
          "--database_path", str(db),
          "--image_path", str(frames),
          "--output_path", str(sparse),
-         "--Mapper.num_threads", "8"],
+         "--Mapper.num_threads", "12"],
         "Step 3c/7 - COLMAP: Sparse reconstruction"
     )
 
@@ -332,11 +332,100 @@ def step_nerfstudio():
             sys.exit(1)
 
 
-def step_3dgs():
+def find_postshot_cli():
+    """Locate Jawset postshot-cli.exe in standard installation paths or PATH."""
+    prog_files = os.environ.get("PROGRAMFILES", r"C:\Program Files")
+    local_appdata = os.environ.get("LOCALAPPDATA", "")
+    candidates = [
+        Path(prog_files) / "Jawset Postshot" / "bin" / "postshot-cli.exe",
+        Path(prog_files) / "Jawset Postshot" / "postshot-cli.exe",
+        Path(local_appdata) / "Jawset Postshot" / "bin" / "postshot-cli.exe",
+        Path(r"C:\Program Files\Jawset Postshot\bin\postshot-cli.exe"),
+        Path(r"C:\Program Files\Jawset Postshot\postshot-cli.exe"),
+    ]
+    which_path = shutil.which("postshot-cli")
+    if which_path:
+        candidates.insert(0, Path(which_path))
+    for c in candidates:
+        if c.exists() and c.is_file():
+            return c.resolve()
+    return None
+
+
+def step_postshot(video_path: Path, steps_limit: int = 30) -> bool:
+    """Execute high-speed GPU Structure-from-Motion tracking and 3DGS training via Postshot CLI."""
+    postshot_exe = find_postshot_cli()
+    if not postshot_exe:
+        print("\n" + "!" * 70)
+        print("  [ERROR] Jawset Postshot CLI ('postshot-cli.exe') was not found on your system!")
+        print("  To use Workflow B (Automated Postshot CLI):")
+        print("    1. Download Jawset Postshot for Windows from: https://www.jawset.com/postshot/")
+        print("    2. Run installer (default path: C:\\Program Files\\Jawset Postshot)")
+        print("    3. Re-run this command with --postshot!")
+        print("!" * 70 + "\n")
+        return False
+
+    splat_out = ROOT / "output" / "splat"
+    splat_out.mkdir(parents=True, exist_ok=True)
+    psht_file = splat_out / f"{video_path.stem}.psht"
+    ply_export = splat_out / "point_cloud.ply"
+
+    # Check if COLMAP dense data is already available; if so, pass both images and colmap data
+    dense_images = ROOT / "output" / "colmap" / "dense" / "images"
+    dense_sparse = ROOT / "output" / "colmap" / "dense" / "sparse" / "0"
+    if dense_images.exists() and dense_sparse.exists():
+        import_args = ["--import", str(dense_images), str(dense_sparse)]
+        print(f"[INFO] Postshot: Using pre-computed COLMAP poses from {dense_sparse}")
+    else:
+        # Import video directly: Postshot runs its built-in fast GPU camera tracking!
+        import_args = ["--import", str(video_path)]
+        print(f"[INFO] Postshot: Running full GPU camera tracking & 3DGS training directly on {video_path.name}")
+
+    cmd = [
+        str(postshot_exe), "train",
+        *import_args,
+        "--output", str(psht_file),
+        "--export-splat", str(ply_export),
+        "--max-image-size", "1600",
+        "-s", str(steps_limit),
+        "--show-train-error"
+    ]
+
+    ok = run(cmd, f"Step 5/7 - Jawset Postshot GPU Pipeline ({steps_limit}k steps)", check=False)
+    if not ok or not ply_export.exists():
+        # Try legacy export flag --export-splat-ply for older Postshot beta builds
+        cmd_legacy = [
+            str(postshot_exe), "train",
+            *import_args,
+            "--output", str(psht_file),
+            "--export-splat-ply", str(ply_export),
+            "--max-image-size", "1600",
+            "-s", str(steps_limit),
+            "--show-train-error"
+        ]
+        ok = run(cmd_legacy, "Step 5/7 - Jawset Postshot (legacy export flag)", check=False)
+
+    if ply_export.exists():
+        convert_ply_to_splat(ply_export, splat_out / "scene.splat")
+        return True
+
+    candidates = list(splat_out.glob("*.ply"))
+    if candidates:
+        convert_ply_to_splat(candidates[0], splat_out / "scene.splat")
+        return True
+
+    print("[ERROR] Postshot finished but no exported .ply splat file was generated.")
+    return False
+
+
+def step_3dgs(iterations=10000, resolution=-1, densify_grad_threshold=0.0002):
     splat_out = ROOT / "output" / "splat"
     splat_out.mkdir(parents=True, exist_ok=True)
     iter_out = splat_out / "iteration_30000"
     iter_out.mkdir(parents=True, exist_ok=True)
+
+    # Enable expandable segments to allow 65-75% safe VRAM utilization on RTX 4060 (prevents OOM / thrashing)
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
     gs_repo = ROOT.parent / "gaussian-splatting"
     ran_train = False
@@ -351,16 +440,22 @@ def step_3dgs():
             if test_res.returncode == 0:
                 dense_dir = ROOT / "output" / "colmap" / "dense"
                 train_source = dense_dir if dense_dir.exists() else (ROOT / "output" / "colmap")
+                save_iters = sorted(list(set([i for i in [7000, 10000, iterations] if i <= iterations])))
+                cmd = [
+                    sys.executable, "train.py",
+                    "-s", str(train_source),
+                    "-m", str(splat_out),
+                    "--iterations", str(iterations),
+                    "--save_iterations", *[str(i) for i in save_iters],
+                    "--data_device", "cpu",
+                    "-r", str(resolution),
+                    "--densify_grad_threshold", str(densify_grad_threshold),
+                    "--sh_degree", "3",
+                    "--disable_viewer"
+                ]
                 run(
-                    [sys.executable, "train.py",
-                     "-s", str(train_source),
-                     "-m", str(splat_out),
-                     "--iterations", "7000",
-                     "--save_iterations", "7000",
-                     "--data_device", "cpu",
-                     "-r", "2",
-                     "--disable_viewer"],
-                    "Step 5/7 - 3D Gaussian Splatting Training",
+                    cmd,
+                    f"Step 5/7 - 3D Gaussian Splatting High-Precision Training ({iterations} iters, scale=1:{resolution})",
                     cwd=gs_repo
                 )
                 ran_train = True
@@ -537,19 +632,46 @@ def step_occupancy_grid(scene_name="Indoor Tour Scene", slug: str = "scene"):
 
 
 def resolve_video_path(args_video) -> Path:
-    candidates = []
+    video_exts = [".mp4", ".mov", ".MOV", ".MP4", ".mkv", ".avi"]
+    
     if args_video:
-        candidates.append(Path(args_video))
-        candidates.append(ROOT / args_video)
-        candidates.append(WORKSPACE_ROOT / args_video)
+        raw_p = Path(args_video)
+        # 1. Exact match checks
+        for c in [raw_p, ROOT / args_video, WORKSPACE_ROOT / args_video]:
+            if c.exists() and c.is_file():
+                return c.resolve()
 
-    # Look for Tour video.mp4 in common places
-    candidates.extend([
+        # 2. Try with alternative extensions (e.g. user typed .mp4 but file is .MOV or vice versa)
+        stem = raw_p.stem
+        parent_dirs = [raw_p.parent if str(raw_p.parent) not in (".", "") else None, WORKSPACE_ROOT, ROOT]
+        for pdir in parent_dirs:
+            if not pdir:
+                continue
+            for ext in video_exts:
+                cand = (pdir / f"{stem}{ext}").resolve()
+                if cand.exists() and cand.is_file():
+                    print(f"[INFO] Auto-matched video extension: {cand.name}")
+                    return cand
+
+        # 3. Case-insensitive stem search in WORKSPACE_ROOT
+        for f in WORKSPACE_ROOT.iterdir():
+            if f.is_file() and f.stem.lower() == stem.lower() and f.suffix.lower() in [".mp4", ".mov", ".mkv", ".avi"]:
+                print(f"[INFO] Found matching video in workspace: {f.name}")
+                return f.resolve()
+
+        # If user explicitly passed a video and it couldn't be found, do NOT silently fall back!
+        available = [f.name for f in WORKSPACE_ROOT.iterdir() if f.is_file() and f.suffix.lower() in [".mp4", ".mov", ".mkv", ".avi"]]
+        raise FileNotFoundError(f"Could not find video matching '{args_video}'. Available videos in workspace: {available}")
+
+    # Only fall back to defaults if no video was specified at all
+    candidates = [
         WORKSPACE_ROOT / "Tour video.mp4",
         ROOT / "Tour video.mp4",
         ROOT.parent / "Tour video.mp4",
-    ])
+    ]
     candidates.extend(list(WORKSPACE_ROOT.glob("*.mp4")))
+    candidates.extend(list(WORKSPACE_ROOT.glob("*.mov")))
+    candidates.extend(list(WORKSPACE_ROOT.glob("*.MOV")))
 
     for c in candidates:
         if c.exists() and c.is_file():
@@ -561,11 +683,16 @@ def resolve_video_path(args_video) -> Path:
 def main():
     parser = argparse.ArgumentParser(description="Namma Space full reconstruction pipeline")
     parser.add_argument("--video", default=None, help="Path to the input video file")
-    parser.add_argument("--fps", type=float, default=6.0, help="Frames per second to extract (default: 6)")
+    parser.add_argument("--fps", type=float, default=2.5, help="Frames per second to extract (default: 2.5)")
     parser.add_argument("--blur", type=float, default=0.0, help="Blur rejection threshold (default: 0.0, disabled)")
     parser.add_argument("--clean", action="store_true", help="Clean output directories before running")
     parser.add_argument("--skip-3dgs", action="store_true", help="Skip Gaussian Splatting (faster, mesh only)")
     parser.add_argument("--start-from", type=int, default=1, help="Start from step N (1-7)")
+    parser.add_argument("--iterations", type=int, default=10000, help="3DGS iterations (default: 10000 balanced, 15000 max)")
+    parser.add_argument("--resolution", type=int, default=-1, help="Resolution scale (default: -1 = high-definition 1.6K/1080p)")
+    parser.add_argument("--densify-thresh", type=float, default=0.0002, help="Densification gradient threshold (default: 0.0002)")
+    parser.add_argument("--postshot", action="store_true", help="Use Jawset Postshot CLI for GPU camera tracking & 3DGS training")
+    parser.add_argument("--postshot-steps", type=int, default=30, help="Postshot training steps in thousands (default: 30 = 30k steps)")
     parser.add_argument("extra_args", nargs="*", help="Optional extra positional arguments")
     args = parser.parse_args()
 
@@ -598,6 +725,7 @@ def main():
     print(f"  Video: {video_path}")
     print(f"  Scene Name: {scene_name}")
     print(f"  Starting from step: {args.start_from}")
+    print(f"  3DGS Precision: {args.iterations} iters, scale=1:{args.resolution}, densify={args.densify_thresh}")
     print("="*55)
 
     def extract_with_fps():
@@ -608,12 +736,24 @@ def main():
 
     slug = video_path.stem.lower().replace(' ', '_').replace('-', '_')
 
+    def run_training():
+        if args.skip_3dgs:
+            return
+        if args.postshot:
+            print("[INFO] Executing Workflow B: Jawset Postshot CLI...")
+            ok = step_postshot(video_path, args.postshot_steps)
+            if not ok:
+                print("[WARN] Postshot training was unsuccessful. Falling back to built-in Inria 3DGS...")
+                step_3dgs(args.iterations, args.resolution, args.densify_thresh)
+        else:
+            step_3dgs(args.iterations, args.resolution, args.densify_thresh)
+
     steps = [
         (1, step_install),
         (2, extract_with_fps),
         (3, step_colmap),
         (4, step_nerfstudio),
-        (5, lambda: None if args.skip_3dgs else step_3dgs()),
+        (5, run_training),
         (6, lambda: step_export(slug)),
         (7, lambda: step_occupancy_grid(scene_name, slug)),
     ]
