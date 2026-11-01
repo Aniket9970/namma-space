@@ -1,39 +1,47 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, Suspense } from 'react'
 import * as THREE from 'three'
 import { useGLTF } from '@react-three/drei'
 
-export default function ProxyMeshView({ url, mode = 'dollhouse' }) {
+function MeshModel({ url, rotation = [0, 0, 0], position = [0, 0, 0], scale = [1, 1, 1] }) {
   const { scene } = useGLTF(url)
 
   const preparedScene = useMemo(() => {
-    const clone = scene.clone()
+    if (!scene) return null
+    const clone = scene.clone(true)
     clone.traverse((child) => {
       if (child.isMesh) {
-        if (mode === 'dollhouse') {
-          // In dollhouse mode: transparent or neutral architectural look
+        child.castShadow = true
+        child.receiveShadow = true
+        // If geometry contains vertex colors, preserve and display them with realistic lighting
+        if (child.geometry?.attributes?.color) {
           child.material = new THREE.MeshStandardMaterial({
-            color: '#b0c4de',
-            roughness: 0.6,
+            vertexColors: true,
+            roughness: 0.7,
             metalness: 0.1,
             side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.85,
           })
         } else {
-          // In free-roam mode: textured or shadow-receiving physical walls
           child.material = new THREE.MeshStandardMaterial({
-            color: '#9aa8b8',
-            roughness: 0.8,
+            color: '#88a0b5',
+            roughness: 0.7,
+            metalness: 0.1,
             side: THREE.DoubleSide,
           })
         }
-        child.castShadow = true
-        child.receiveShadow = true
       }
     })
     return clone
-  }, [scene, mode])
+  }, [scene])
 
-  return <primitive object={preparedScene} />
+  if (!preparedScene) return null
+  return <primitive object={preparedScene} rotation={rotation} position={position} scale={scale} />
 }
 
+export default function ProxyMeshView({ url, rotation = [0, 0, 0], position = [0, 0, 0], scale = [1, 1, 1] }) {
+  if (!url) return null
+  return (
+    <Suspense fallback={null}>
+      <MeshModel url={url} rotation={rotation} position={position} scale={scale} />
+    </Suspense>
+  )
+}
