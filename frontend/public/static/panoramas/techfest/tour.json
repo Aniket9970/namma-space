@@ -1,0 +1,23 @@
+{
+  "name": "Physical Smartphone Capture (Techfest IIT Bombay)",
+  "nodes": [
+    {
+      "id": "entry",
+      "name": "Main Entrance",
+      "position": [0.0, 0.0, 3.0],
+      "neighbors": ["center"]
+    },
+    {
+      "id": "center",
+      "name": "Center Hall",
+      "position": [0.0, 0.0, 0.0],
+      "neighbors": ["entry", "target"]
+    },
+    {
+      "id": "target",
+      "name": "Feature Display Area",
+      "position": [-1.5, 0.0, -1.8],
+      "neighbors": ["center"]
+    }
+  ]
+}

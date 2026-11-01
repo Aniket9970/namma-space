@@ -1,0 +1,26 @@
+[
+  {
+    "id": "poi_entry",
+    "name": "Main Entrance",
+    "category": "Entrance",
+    "aliases": ["main entrance", "entry", "door", "front"],
+    "position": [0.0, 0.0, 3.0],
+    "source": "manual"
+  },
+  {
+    "id": "poi_center",
+    "name": "Center Hall",
+    "category": "Amenity",
+    "aliases": ["center hall", "center", "living room", "hall"],
+    "position": [0.0, 0.0, 0.0],
+    "source": "manual"
+  },
+  {
+    "id": "poi_target",
+    "name": "Feature Display Area",
+    "category": "Exhibition",
+    "aliases": ["feature display area", "display", "target", "showcase"],
+    "position": [-1.5, 0.0, -1.8],
+    "source": "manual"
+  }
+]

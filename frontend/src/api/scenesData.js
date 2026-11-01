@@ -1,6 +1,26 @@
 // scenesData.js — Fallback scene and POI data for standalone / Vercel deployment
 export const DEFAULT_SCENES = [
   {
+    "id": 11,
+    "name": "Physical Smartphone Capture (Techfest IIT Bombay)",
+    "glb_path": "/static/models/sample_scene.glb",
+    "splat_path": "/static/models/model.splat",
+    "grid_path": "/static/navigation/sample_scene_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -15.0,\n    -15.0\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 300,\n  \"cols\": 300,\n  \"floor_y\": 0.0\n}",
+    "tour_path": "/static/panoramas/techfest/tour.json",
+    "created_at": "2026-11-01T12:00:00.000000+00:00"
+  },
+  {
+    "id": 12,
+    "name": "Apartment Scene (Full Walkthrough)",
+    "glb_path": "/static/models/sample_scene.glb",
+    "splat_path": "/static/models/apartment.splat",
+    "grid_path": "/static/navigation/sample_scene_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -6.0,\n    -6.0\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 120,\n  \"cols\": 120,\n  \"floor_y\": 0.0\n}",
+    "tour_path": "/static/panoramas/sample_scene/tour.json",
+    "created_at": "2026-11-01T11:00:00.000000+00:00"
+  },
+  {
     "id": 10,
     "name": "Ex4 Scene",
     "glb_path": "/static/models/ex4.glb",
@@ -82,7 +102,7 @@ export const DEFAULT_SCENES = [
   },
   {
     "id": 5,
-    "name": "Sample Scene Scene",
+    "name": "Sample Space (Quick Demo)",
     "glb_path": "/static/models/sample_scene.glb",
     "splat_path": "/static/models/sample_scene.splat",
     "grid_path": "/static/navigation/sample_scene_grid.npy",
@@ -103,6 +123,61 @@ export const DEFAULT_SCENES = [
 ];
 
 export const DEFAULT_POIS = [
+  {
+    "id": 101,
+    "scene_id": 11,
+    "name": "Main Entrance",
+    "description": "Primary entryway for smartphone capture inspection",
+    "x": 0.0,
+    "y": 0.0,
+    "z": 3.0,
+    "grid_row": null,
+    "grid_col": null
+  },
+  {
+    "id": 102,
+    "scene_id": 11,
+    "name": "Center Hall",
+    "description": "Central roam area of reconstructed 3D space",
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0,
+    "grid_row": null,
+    "grid_col": null
+  },
+  {
+    "id": 103,
+    "scene_id": 11,
+    "name": "Feature Display Area",
+    "description": "Key interest zone with detailed point density",
+    "x": -1.5,
+    "y": 0.0,
+    "z": -1.8,
+    "grid_row": null,
+    "grid_col": null
+  },
+  {
+    "id": 104,
+    "scene_id": 12,
+    "name": "Living Room Center",
+    "description": "Main open space of apartment",
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0,
+    "grid_row": null,
+    "grid_col": null
+  },
+  {
+    "id": 105,
+    "scene_id": 12,
+    "name": "Balcony Window",
+    "description": "Window with outdoor lighting",
+    "x": 2.2,
+    "y": 0.0,
+    "z": -3.1,
+    "grid_row": null,
+    "grid_col": null
+  },
   {
     "id": 1,
     "scene_id": 1,
@@ -133,270 +208,6 @@ export const DEFAULT_POIS = [
     "x": -1.5,
     "y": 0.0,
     "z": 1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 4,
-    "scene_id": 2,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 5,
-    "scene_id": 2,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 6,
-    "scene_id": 2,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 7,
-    "scene_id": 3,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 8,
-    "scene_id": 3,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 9,
-    "scene_id": 3,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 10,
-    "scene_id": 4,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 11,
-    "scene_id": 4,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 12,
-    "scene_id": 4,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 13,
-    "scene_id": 6,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 14,
-    "scene_id": 6,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 15,
-    "scene_id": 6,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 16,
-    "scene_id": 7,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 17,
-    "scene_id": 7,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 18,
-    "scene_id": 7,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 19,
-    "scene_id": 8,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 20,
-    "scene_id": 8,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 21,
-    "scene_id": 8,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 22,
-    "scene_id": 9,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 23,
-    "scene_id": 9,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 24,
-    "scene_id": 9,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 25,
-    "scene_id": 10,
-    "name": "Entrance",
-    "description": "Entryway into the space",
-    "x": 0.0,
-    "y": 0.0,
-    "z": -1.5,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 26,
-    "scene_id": 10,
-    "name": "Central Space",
-    "description": "Central area of the room",
-    "x": 0.0,
-    "y": 0.0,
-    "z": 1.0,
-    "grid_row": null,
-    "grid_col": null
-  },
-  {
-    "id": 27,
-    "scene_id": 10,
-    "name": "Far Corner",
-    "description": "Opposite corner of the space",
-    "x": -1.2,
-    "y": 0.0,
-    "z": 3.0,
     "grid_row": null,
     "grid_col": null
   }
