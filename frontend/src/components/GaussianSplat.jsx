@@ -270,7 +270,7 @@ async function loadShared(shared) {
         shared.onProgress({
           loaded: bytesDownloaded,
           total: 0,
-          percent: Math.min(95, Math.round((bytesDownloaded / 1600000) * 100)),
+          percent: Math.min(95, Math.round((bytesDownloaded / 8000000) * 100)),
         })
       }
     }
