@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { DEFAULT_SCENES } from '../api/scenesData.js'
 
-// Default to Physical Smartphone Capture (Techfest IIT Bombay)
-const initialScene = DEFAULT_SCENES[0]
+// Default to Ultra-HD Ex4 scene with 856k splats (original showcase scene)
+const initialScene = DEFAULT_SCENES.find((s) => s.name?.includes('Ex4')) || DEFAULT_SCENES[0]
 
 const useStore = create((set, get) => ({
   // ── Scene & Tour State ───────────────────────────────────────────────────────

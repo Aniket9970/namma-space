@@ -442,16 +442,8 @@ function PhotorealisticSplat({
 
   if (!mesh) return null
 
-  // Auto-center splat cloud so model pivots and centers right at [0, 1.2, 0]
-  const center = mesh.userData?.bounds?.center
-  const offsetX = center ? -center.x : 0
-  const offsetY = center ? -center.y : 0
-  const offsetZ = center ? -center.z : 0
-
   return (
-    <group position={[0, 1.2, 0]} rotation={[rx, 0, rz]}>
-      <primitive object={mesh} position={[offsetX, offsetY, offsetZ]} />
-    </group>
+    <primitive object={mesh} rotation={[rx, 0, rz]} position={[0, 1.65, 0]} />
   )
 }
 
@@ -819,7 +811,7 @@ export default function Viewer3D({ onPOIPlace }) {
             <SplatWASDControls enabled={true} onSyncPosition={handleSyncPosition} />
           ) : (
             <OrbitControls
-              target={[0, 1.2, 0]}
+              target={[0, 1.65, 0]}
               maxPolarAngle={Math.PI}
               minDistance={0.2}
               maxDistance={60}

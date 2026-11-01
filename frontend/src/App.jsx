@@ -37,10 +37,11 @@ export default function App() {
     if (currentScene) fetchPOIs()
   }, [currentScene, fetchPOIs])
 
-  // Auto-select first scene if available and none selected
+  // Auto-select Ex4 scene if available and none selected
   useEffect(() => {
     if (!currentScene && scenes.length > 0) {
-      setScene(scenes[0])
+      const defaultScene = scenes.find((s) => s.name?.includes('Ex4')) || scenes[0]
+      setScene(defaultScene)
     }
     if (scenes.length === 0 && !currentScene) {
       setShowScenePicker(true)
