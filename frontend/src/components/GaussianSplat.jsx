@@ -78,8 +78,8 @@ const SplatMaterial = shaderMaterial(
       vec2 diagDiff = vec2(offDiagonal, lambda1 - diagonal1);
       float dLen = length(diagDiff);
       vec2 diagonalVector = dLen > 0.0001 ? diagDiff / dLen : vec2(1.0, 0.0);
-      vec2 v1 = min(sqrt(2.0 * lambda1), 1024.0) * diagonalVector;
-      vec2 v2 = min(sqrt(2.0 * lambda2), 1024.0) * vec2(diagonalVector.y, -diagonalVector.x);
+      vec2 v1 = min(sqrt(2.0 * max(lambda1, 0.001)), 1024.0) * diagonalVector;
+      vec2 v2 = min(sqrt(2.0 * max(lambda2, 0.001)), 1024.0) * vec2(diagonalVector.y, -diagonalVector.x);
       uint colorUint = covAndColorData.w;
       vColor = vec4(
         float(colorUint & uint(0xFF)) / 255.0,
@@ -130,7 +130,7 @@ function createSortWorker(self) {
 
     if (!depthList || depthList.length !== vertexCount) {
       depthList = new Float32Array(vertexCount)
-      sizeList = new Int32Array(depthList.buffer)
+      sizeList = new Int32Array(vertexCount)
       validIndexList = new Int32Array(vertexCount)
     }
 
@@ -153,10 +153,14 @@ function createSortWorker(self) {
     }
 
     counts0.fill(0)
-    const depthInv = (256 * 256 - 1) / (maxDepth - minDepth)
+    const depthRange = maxDepth - minDepth
+    const depthInv = depthRange > 0.00001 ? (256 * 256 - 1) / depthRange : 0
     for (let i = 0; i < validCount; i++) {
-      sizeList[i] = ((depthList[i] - minDepth) * depthInv) | 0
-      counts0[sizeList[i]]++
+      let idx = ((depthList[i] - minDepth) * depthInv) | 0
+      if (idx < 0) idx = 0
+      else if (idx > 65535) idx = 65535
+      sizeList[i] = idx
+      counts0[idx]++
     }
     starts0[0] = 0
     for (let i = 1; i < 256 * 256; i++) starts0[i] = starts0[i - 1] + counts0[i - 1]

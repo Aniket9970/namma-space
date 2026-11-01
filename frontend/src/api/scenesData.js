@@ -5,6 +5,7 @@ export const DEFAULT_SCENES = [
     "name": "Ex4 Scene",
     "glb_path": "/static/models/ex4.glb",
     "splat_path": "/static/models/ex4.splat",
+    "splat_path_mobile": "/static/models/ex4_mobile.splat",
     "grid_path": "/static/navigation/ex4_grid.npy",
     "grid_meta_json": "{\n  \"origin\": [\n    -29.694438934326172,\n    -81.98799896240234\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 1640,\n  \"cols\": 594,\n  \"floor_y\": 0.0\n}",
     "tour_path": "/static/panoramas/ex4/tour.json",

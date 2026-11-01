@@ -562,7 +562,13 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
     [onPOIPlace]
   )
 
-  const splatUrl = currentScene?.splat_path || DEFAULT_SCENES[0]?.splat_path || '/static/models/sample_scene.splat'
+  const splatUrl = useMemo(() => {
+    if (isMobile) {
+      if (currentScene?.splat_path_mobile) return currentScene.splat_path_mobile
+      if (currentScene?.splat_path?.endsWith('ex4.splat')) return '/static/models/ex4_mobile.splat'
+    }
+    return currentScene?.splat_path || DEFAULT_SCENES[0]?.splat_path || '/static/models/sample_scene.splat'
+  }, [currentScene, isMobile])
   const navgridUrl = currentScene?.tour_path
     ? `${currentScene.tour_path.substring(0, currentScene.tour_path.lastIndexOf('/'))}/nav/navgrid.json`
     : '/static/navigation/navgrid.json'
@@ -601,23 +607,22 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
       <div
         style={{
           position: 'absolute',
-          top: 14,
-          left: 14,
+          top: isMobile ? 8 : 14,
+          left: isMobile ? 8 : 14,
           zIndex: 25,
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: isMobile ? 6 : 10,
+          gap: isMobile ? 4 : 8,
           alignItems: 'center',
-          maxWidth: isMobile ? 'calc(100vw - 28px)' : 'auto',
+          maxWidth: isMobile ? 'calc(100vw - 140px)' : 'auto',
         }}
       >
         {/* 3DGS Controls Mode Selector Pill */}
         <div
           style={{
             display: 'flex',
-            gap: 4,
+            gap: 2,
             background: 'rgba(10, 20, 35, 0.92)',
-            padding: 4,
+            padding: 3,
             borderRadius: 8,
             border: '1px solid #1e3a5f',
             boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
@@ -631,13 +636,13 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
               color: controlMode === 'wasd' ? '#0a101d' : '#00e5ff',
               border: 'none',
               borderRadius: 6,
-              padding: isMobile ? '5px 10px' : '6px 14px',
-              fontSize: 12,
+              padding: isMobile ? '4px 7px' : '6px 14px',
+              fontSize: isMobile ? 11 : 12,
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 3,
               transition: 'all 0.15s',
             }}
           >
@@ -650,13 +655,13 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
               color: controlMode === 'orbit' ? '#0a101d' : '#88a0b5',
               border: 'none',
               borderRadius: 6,
-              padding: isMobile ? '5px 10px' : '6px 14px',
-              fontSize: 12,
+              padding: isMobile ? '4px 7px' : '6px 14px',
+              fontSize: isMobile ? 11 : 12,
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 3,
               transition: 'all 0.15s',
             }}
           >
@@ -664,8 +669,8 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
           </button>
         </div>
 
-        {/* POI Search Bar with Fuse.js (hidden on very small mobile portrait to save space) */}
-        {(!isMobile || window.innerWidth > 480) && (
+        {/* POI Search Bar with Fuse.js (Desktop only) */}
+        {!isMobile && (
           <POISearchBar onNavigateToPOI={handleNavigateToPOI} />
         )}
 
@@ -673,9 +678,9 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
         <div
           style={{
             display: 'flex',
-            gap: 4,
+            gap: 2,
             background: 'rgba(10, 20, 35, 0.92)',
-            padding: 4,
+            padding: 3,
             borderRadius: 8,
             border: '1px solid #1e3a5f',
             boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
@@ -690,30 +695,32 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
               color: '#00e5ff',
               border: 'none',
               borderRadius: 6,
-              padding: isMobile ? '5px 8px' : '6px 10px',
-              fontSize: 12,
+              padding: isMobile ? '4px 6px' : '6px 10px',
+              fontSize: isMobile ? 11 : 12,
               fontWeight: 700,
               cursor: 'pointer',
             }}
           >
             ↺ 90°
           </button>
-          <button
-            onClick={handleRotateRight}
-            title="Rotate 90 degrees right"
-            style={{
-              background: 'transparent',
-              color: '#00e5ff',
-              border: 'none',
-              borderRadius: 6,
-              padding: isMobile ? '5px 8px' : '6px 10px',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            ↻ 90°
-          </button>
+          {!isMobile && (
+            <button
+              onClick={handleRotateRight}
+              title="Rotate 90 degrees right"
+              style={{
+                background: 'transparent',
+                color: '#00e5ff',
+                border: 'none',
+                borderRadius: 6,
+                padding: '6px 10px',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              ↻ 90°
+            </button>
+          )}
           <button
             onClick={() => setInvertY((v) => !v)}
             title="Flip 180 degrees upright / inverted"
@@ -722,8 +729,8 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
               color: '#ffaa00',
               border: 'none',
               borderRadius: 6,
-              padding: isMobile ? '5px 8px' : '6px 10px',
-              fontSize: 12,
+              padding: isMobile ? '4px 6px' : '6px 10px',
+              fontSize: isMobile ? 11 : 12,
               fontWeight: 700,
               cursor: 'pointer',
             }}
@@ -739,7 +746,7 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
                 color: '#ff6666',
                 border: '1px solid rgba(255, 60, 60, 0.3)',
                 borderRadius: 6,
-                padding: isMobile ? '5px 8px' : '6px 10px',
+                padding: isMobile ? '4px 6px' : '6px 10px',
                 fontSize: 11,
                 fontWeight: 700,
                 cursor: 'pointer',

@@ -115,11 +115,21 @@ export default function App() {
         <Viewer3D onPOIPlace={handlePOIPlace} isMobile={isMobile} />
 
         {/* Top bar */}
-        <div style={styles.topBar}>
+        <div style={{
+          ...styles.topBar,
+          top: isMobile ? 8 : 12,
+          right: isMobile ? 8 : 12,
+          gap: isMobile ? 4 : 8,
+          maxWidth: isMobile ? 'calc(100vw - 150px)' : 'calc(100vw - 24px)',
+        }}>
           {isMobile && (
             <button
               onClick={() => setSidebarOpen(true)}
-              style={styles.mobileMenuBtn}
+              style={{
+                ...styles.mobileMenuBtn,
+                padding: '5px 8px',
+                fontSize: 11,
+              }}
             >
               ☰ POIs
             </button>
@@ -127,19 +137,25 @@ export default function App() {
 
           <button
             onClick={() => setShowScenePicker(true)}
-            style={styles.topBarBtn}
+            style={{
+              ...styles.topBarBtn,
+              padding: isMobile ? '5px 8px' : '7px 14px',
+              fontSize: isMobile ? 11 : 13,
+            }}
           >
             🗂 {currentScene ? currentScene.name : 'Select Scene'}
           </button>
           {mode === 'poi-select' && (
-            <div style={styles.modeBadge}>{isMobile ? '📍 Tap POI' : '📍 Double-click to place POI'}</div>
+            <div style={{ ...styles.modeBadge, padding: isMobile ? '5px 8px' : '7px 14px', fontSize: isMobile ? 10 : 12 }}>
+              {isMobile ? '📍 Tap POI' : '📍 Double-click to place POI'}
+            </div>
           )}
           {mode === 'navigate' && (
-            <div style={{ ...styles.modeBadge, background: '#1a3010', borderColor: '#4caf50' }}>
+            <div style={{ ...styles.modeBadge, background: '#1a3010', borderColor: '#4caf50', padding: isMobile ? '5px 8px' : '7px 14px', fontSize: isMobile ? 10 : 12 }}>
               🧭 Nav
             </div>
           )}
-          {isLoading && <div style={styles.loadingBadge}>⏳ Loading…</div>}
+          {isLoading && <div style={{ ...styles.loadingBadge, padding: isMobile ? '5px 8px' : '7px 14px', fontSize: isMobile ? 10 : 12 }}>⏳ Loading…</div>}
         </div>
       </div>
 
