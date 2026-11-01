@@ -224,6 +224,7 @@ class RobustSplatLoader extends THREE.Loader {
       covAndColorTexture: null,
       centerAndScaleTexture: null,
       onProgress: onProgress || this.onProgress,
+      onLoaded: this.onLoaded,
     }
 
     loadShared(shared)
@@ -258,13 +259,29 @@ async function loadShared(shared) {
     if (done) break
     chunks.push(value)
     bytesDownloaded += value.length
-    if (shared.onProgress && totalDownloadBytes > 0) {
-      shared.onProgress({
-        loaded: bytesDownloaded,
-        total: totalDownloadBytes,
-        percent: Math.min(100, Math.round((bytesDownloaded / totalDownloadBytes) * 100)),
-      })
+    if (shared.onProgress) {
+      if (totalDownloadBytes > 0) {
+        shared.onProgress({
+          loaded: bytesDownloaded,
+          total: totalDownloadBytes,
+          percent: Math.min(99, Math.round((bytesDownloaded / totalDownloadBytes) * 100)),
+        })
+      } else {
+        shared.onProgress({
+          loaded: bytesDownloaded,
+          total: 0,
+          percent: Math.min(95, Math.round((bytesDownloaded / 1600000) * 100)),
+        })
+      }
     }
+  }
+
+  if (shared.onProgress) {
+    shared.onProgress({
+      loaded: bytesDownloaded,
+      total: bytesDownloaded,
+      percent: 100,
+    })
   }
 
   const fullArray = new Uint8Array(bytesDownloaded)
@@ -350,6 +367,9 @@ async function lazyLoad(shared) {
 
   shared.loaded = true
   shared.manager.itemEnd(shared.url)
+  if (typeof shared.onLoaded === 'function') {
+    shared.onLoaded()
+  }
 }
 
 function update(camera, shared, target) {
@@ -410,6 +430,9 @@ function connect(shared, target) {
       geometry.attributes.splatIndex.needsUpdate = true
       geometry.instanceCount = indexes.length
       target.ready = true
+      if (typeof shared.onLoaded === 'function') {
+        shared.onLoaded()
+      }
     }
   }
 
@@ -423,6 +446,9 @@ function connect(shared, target) {
       await new Promise((resolve) => setTimeout(resolve, 10))
     }
     target.ready = true
+    if (typeof shared.onLoaded === 'function') {
+      shared.onLoaded()
+    }
   }
   wait()
 
@@ -580,7 +606,14 @@ export default function GaussianSplat({
     loader.gl = gl
     loader.chunkSize = chunkSize
     loader.onProgress = onProgress
+    loader.onLoaded = onLoaded
   })
+
+  // Keep callback references synchronized on the shared loader object
+  if (shared) {
+    shared.onProgress = onProgress
+    shared.onLoaded = onLoaded
+  }
 
   useLayoutEffect(() => {
     const cleanup = shared.connect(ref.current)

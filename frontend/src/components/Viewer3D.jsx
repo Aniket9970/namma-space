@@ -589,6 +589,11 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
   // Reset loading progress whenever scene / splatUrl changes
   useEffect(() => {
     setSplatLoadingProgress({ loading: true, percent: 0, loaded: 0, total: 0 })
+    // Safety auto-dismiss: if splats finish rendering or network takes max 18s, dismiss loading HUD
+    const timer = setTimeout(() => {
+      setSplatLoadingProgress((prev) => ({ ...prev, loading: false }))
+    }, 18000)
+    return () => clearTimeout(timer)
   }, [splatUrl])
 
   const handleSplatProgress = useCallback((p) => {
@@ -977,9 +982,25 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
             textAlign: 'center',
             width: 'min(320px, 86vw)',
             maxWidth: '90vw',
-            pointerEvents: 'none',
           }}
         >
+          <button
+            onClick={() => setSplatLoadingProgress((prev) => ({ ...prev, loading: false }))}
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: 'transparent',
+              border: 'none',
+              color: '#88a0b5',
+              fontSize: 16,
+              cursor: 'pointer',
+              padding: 4,
+            }}
+            title="Dismiss loading overlay"
+          >
+            ✕
+          </button>
           <div style={{ fontSize: 26, marginBottom: 8 }}>⚡</div>
           <div
             style={{
