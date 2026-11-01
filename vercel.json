@@ -19,7 +19,7 @@
     },
     "reconstruction": {
       "root": "reconstruction",
-      "runtime": "python"
+      "framework": "fastapi"
     }
   },
   "rewrites": [
