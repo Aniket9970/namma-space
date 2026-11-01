@@ -1,0 +1,16 @@
+# Ignore duplicate heavy static assets in backend function bundle
+backend/static/models/
+backend/static/panoramas/
+*.splat.orig
+
+# Ignore local pipeline & training dependencies
+bench/
+test/
+docs/
+pipeline/
+gaussian-splatting/
+reconstruction/run_pipeline.py
+reconstruction/build_occupancy_grid.py
+reconstruction/build_photosphere_tour.py
+reconstruction/export_web.py
+reconstruction/extract_frames.py

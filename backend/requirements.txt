@@ -6,8 +6,6 @@ pydantic
 sqlalchemy[asyncio]
 greenlet
 aiosqlite
-trimesh
 numpy
-scipy
 fuzzywuzzy
 python-Levenshtein
