@@ -399,8 +399,8 @@ export default function Viewer3D({ onPOIPlace }) {
 
   // Control mode: 'wasd' (First-person walk) vs 'orbit' (Inspect from outside)
   const [controlMode, setControlMode] = useState('wasd')
-  const [invertY, setInvertY] = useState(false)
-  const [renderMode, setRenderMode] = useState('mesh') // 'mesh' (instant load) | 'both' | 'splat'
+  const [invertY, setInvertY] = useState(true) // Default upright (flips COLMAP Y-down to Three.js Y-up)
+  const [renderMode, setRenderMode] = useState('both') // 'both' | 'mesh' | 'splat'
 
   // Orientation offsets
   const isRoomvid = currentScene?.name?.toLowerCase().includes('roomvid')
@@ -727,10 +727,11 @@ export default function Viewer3D({ onPOIPlace }) {
           camera={{ position: [0, 1.65, 3.2], fov: 75, near: 0.1, far: 200 }}
           style={{ background: '#0a0e14' }}
         >
-          <ambientLight intensity={1.4} />
+          <ambientLight intensity={1.8} />
           <directionalLight position={[10, 20, 10]} intensity={1.6} />
-          <directionalLight position={[-10, 20, -10]} intensity={1.2} />
-          <directionalLight position={[0, -10, 0]} intensity={0.6} />
+          <directionalLight position={[-10, 20, -10]} intensity={1.4} />
+          <directionalLight position={[0, -10, 0]} intensity={1.0} />
+          <directionalLight position={[0, 15, 0]} intensity={1.0} />
 
           {/* 1. 3D Reconstructed Room Mesh */}
           {(renderMode === 'mesh' || renderMode === 'both') && glbUrl && (
@@ -757,10 +758,10 @@ export default function Viewer3D({ onPOIPlace }) {
             <SplatWASDControls enabled={true} onSyncPosition={handleSyncPosition} />
           ) : (
             <OrbitControls
-              target={[0, 1.2, 0]}
-              maxPolarAngle={Math.PI / 2 + 0.3}
-              minDistance={0.5}
-              maxDistance={40}
+              target={[0, 1.65, 0]}
+              maxPolarAngle={Math.PI}
+              minDistance={0.2}
+              maxDistance={60}
               enableDamping
               dampingFactor={0.08}
             />
