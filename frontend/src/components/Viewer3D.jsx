@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, Suspense, useMemo } from 'react'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { Splat, Text, Line, Grid, OrbitControls, Loader } from '@react-three/drei'
+import { Splat, Text, Line, Grid, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 
 import useStore from '../store/useStore'
@@ -342,6 +342,24 @@ function SplatWASDControls({ enabled, onSyncPosition }) {
   return null
 }
 
+// ── 3D Gaussian Splat Error Boundary ───────────────────────────────────────────
+class SplatErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  componentDidCatch(error) {
+    console.warn('[PhotorealisticSplat] Splat loading caught by boundary:', error)
+  }
+  render() {
+    if (this.state.hasError) return null
+    return this.props.children
+  }
+}
+
 // ── 3D Gaussian Splat Renderer ────────────────────────────────────────────────
 function PhotorealisticSplat({ splatUrl, rotationZ = 0, rotationX = 0, invertY = false }) {
   if (!splatUrl) return null
@@ -350,25 +368,18 @@ function PhotorealisticSplat({ splatUrl, rotationZ = 0, rotationX = 0, invertY =
   const rz = rotationZ
 
   return (
-    <Suspense
-      fallback={
-        <group position={[0, 1.2, 0]}>
-          <mesh>
-            <boxGeometry args={[1.5, 0.05, 1.5]} />
-            <meshStandardMaterial color="#00e5ff" wireframe opacity={0.4} transparent />
-          </mesh>
-        </group>
-      }
-    >
-      <Splat
-        key={`${splatUrl}-${invertY}-${rx.toFixed(2)}-${rz.toFixed(2)}`}
-        src={splatUrl}
-        rotation={[rx, 0, rz]}
-        position={[0, 1.65, 0]}
-        scale={[1, 1, 1]}
-        alphaTest={0.05}
-      />
-    </Suspense>
+    <SplatErrorBoundary key={splatUrl}>
+      <Suspense fallback={null}>
+        <Splat
+          key={`${splatUrl}-${invertY}-${rx.toFixed(2)}-${rz.toFixed(2)}`}
+          src={splatUrl}
+          rotation={[rx, 0, rz]}
+          position={[0, 1.65, 0]}
+          scale={[1, 1, 1]}
+          alphaTest={0.05}
+        />
+      </Suspense>
+    </SplatErrorBoundary>
   )
 }
 
@@ -389,7 +400,7 @@ export default function Viewer3D({ onPOIPlace }) {
   // Control mode: 'wasd' (First-person walk) vs 'orbit' (Inspect from outside)
   const [controlMode, setControlMode] = useState('wasd')
   const [invertY, setInvertY] = useState(false)
-  const [renderMode, setRenderMode] = useState('both') // 'both' | 'mesh' | 'splat'
+  const [renderMode, setRenderMode] = useState('mesh') // 'mesh' (instant load) | 'both' | 'splat'
 
   // Orientation offsets
   const isRoomvid = currentScene?.name?.toLowerCase().includes('roomvid')
@@ -764,15 +775,6 @@ export default function Viewer3D({ onPOIPlace }) {
           <POIPlacementHandler onPlace={handlePlace} />
         </Canvas>
       </CanvasErrorBoundary>
-
-      {/* ── Visual Loading Bar for 3D Assets ── */}
-      <Loader
-        dataInterpolation={(p) => `Loading 3D Space: ${p.toFixed(0)}%`}
-        containerStyles={{ background: 'rgba(10, 14, 20, 0.94)', zIndex: 100 }}
-        innerStyles={{ width: 220, height: 4, background: '#1e293b' }}
-        barStyles={{ background: '#00e5ff' }}
-        dataStyles={{ color: '#00e5ff', fontSize: 13, fontWeight: 700, marginTop: 10 }}
-      />
 
       {/* ── Radar Minimap ── */}
       <Minimap navgridUrl={navgridUrl} />
