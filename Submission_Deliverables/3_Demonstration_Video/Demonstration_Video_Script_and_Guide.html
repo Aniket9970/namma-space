@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Demonstration Video Script & Guide - Namma Space</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9.5pt; line-height: 1.45; color: #0f172a; }
+  .header { border-bottom: 3px solid #10b981; padding-bottom: 10px; margin-bottom: 16px; }
+  h1 { font-size: 17pt; color: #065f46; margin: 0 0 4px 0; }
+  .badge { display: inline-block; background: #d1fae5; color: #065f46; font-size: 8.5pt; font-weight: bold; padding: 2px 8px; border-radius: 4px; }
+  h2 { font-size: 12pt; color: #065f46; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; margin-top: 14px; margin-bottom: 8px; }
+  .scene-card { background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #10b981; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; }
+  .scene-time { font-weight: bold; color: #047857; font-size: 9pt; }
+  .scene-title { font-size: 11pt; font-weight: bold; color: #0f172a; margin: 2px 0 6px 0; }
+  .dialogue { font-style: italic; color: #1e293b; background: #fff; padding: 6px 10px; border-radius: 4px; border: 1px solid #e2e8f0; margin-top: 6px; }
+  .visuals { font-size: 8.5pt; color: #475569; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="badge">Techfest IIT Bombay 2026–27 | Deliverable 3</div>
+  <h1>Namma Space: 3 to 5-Minute Demonstration Video Guide</h1>
+  <div>Comprehensive Storyboard, Visual Cue Sheet, and Voiceover Script</div>
+</div>
+
+<h2>Video Production Overview</h2>
+<ul>
+  <li><strong>Target Duration:</strong> 4 minutes 15 seconds (within the 3:00 to 5:00 minute competition limit).</li>
+  <li><strong>Resolution & Audio:</strong> 1080p (1920×1080 @ 60 FPS), clear voiceover with subtle background music.</li>
+  <li><strong>Required Components:</strong> Project Scope &rarr; SOP Smartphone Capture &rarr; Pipeline Execution &rarr; Interactive Web Walkthrough &rarr; Benchmarks.</li>
+</ul>
+
+<h2>Minute-by-Minute Video Script & Storyboard</h2>
+
+<div class="scene-card">
+  <div class="scene-time">[0:00 – 0:45] ACT I: Project Scope & Problem Statement</div>
+  <div class="scene-title">Title Card & The Indoor Spatial Challenge</div>
+  <div class="visuals"><strong>On-Screen:</strong> High-impact title animation "Namma Space: Indoor Spatial Engine", followed by side-by-side comparison showing a blurry 3D photogrammetry mesh vs. crisp Namma Space Gaussian Splats.</div>
+  <div class="dialogue">
+    "Indoor spatial digital twins have always faced a painful tradeoff: either spend thousands of dollars on bulky proprietary LiDAR rigs, or settle for low-resolution photogrammetry meshes that blur out fine details and stutter in a browser. Today, Team Namma Space introduces an end-to-end open framework that transforms a simple smartphone video into an ultra-photorealistic, 60-FPS walkable 3D environment inside any web browser."
+  </div>
+</div>
+
+<div class="scene-card">
+  <div class="scene-time">[0:45 – 1:35] ACT II: Standard Operating Procedure (SOP) in Action</div>
+  <div class="scene-title">Live Smartphone Capture Demonstration</div>
+  <div class="visuals"><strong>On-Screen:</strong> Picture-in-picture video showing the operator holding a phone walking inside a home apartment, demonstrating the smooth perimeter loop and figure-8 traversal. Graphic overlays highlight the 75% frame overlap and AE/AF lock.</div>
+  <div class="dialogue">
+    "Our pipeline begins with our formalized Standard Operating Procedure. To ensure flawless multi-view feature tracking, the operator stabilizes lighting, locks auto-exposure and focus, and walks in a steady perimeter loop at under 0.4 meters per second. Notice how the operator closes the loop by returning to the exact starting waypoint, eliminating drift during bundle adjustment."
+  </div>
+</div>
+
+<div class="scene-card">
+  <div class="scene-time">[1:35 – 2:30] ACT III: Automated Reconstruction Pipeline</div>
+  <div class="scene-title">Single CLI Execution & GPU Optimization</div>
+  <div class="visuals"><strong>On-Screen:</strong> Terminal screencast typing <code>python run_pipeline.py --video EX3.MOV --clean</code>. Visual diagrams illustrating Laplacian blur filtering, Structure-from-Motion tracking, and 3D Gaussian Splatting iterations converging in real time.</div>
+  <div class="dialogue">
+    "Back on our workstation, reconstruction is triggered with a single command. First, our automated Laplacian variance filter rejects motion-blurred frames. Next, our dual pose backend computes camera poses with sub-pixel residual error. Our calibrated 3D Gaussian Splatting engine optimizes position, covariance, and 3rd-order spherical harmonics, converging in just 5 minutes while maintaining laptop temperatures under 70 degrees."
+  </div>
+</div>
+
+<div class="scene-card">
+  <div class="scene-time">[2:30 – 3:45] ACT IV: Interactive 3D Web Free-Roaming Walkthrough</div>
+  <div class="scene-title">Live Screen Capture of Web Application</div>
+  <div class="visuals"><strong>On-Screen:</strong> Direct high-resolution recording of <code>http://localhost:5173/</code>. The operator enters the space, switches to WASD mode, sprints, turns, clicks POIs, inspects shiny reflective surfaces, and toggles to Orbit view.</div>
+  <div class="dialogue">
+    "Now let's enter the space. Opening the browser, the entire room streams in under 3 seconds with a compact 27 MB payload. Clicking into the canvas locks the mouse for first-person perspective. Using standard WASD controls, we walk smoothly across the living room. Look closely at the reflections on the floor tiles and the crisp text on the books—this is powered by 3rd-order spherical harmonics. Notice our 5 cm obstacle navmesh preventing the camera from clipping through furniture. We can also toggle into Orbit view to inspect the room from above, or search for points of interest using our real-time fuzzy search bar."
+  </div>
+</div>
+
+<div class="scene-card">
+  <div class="scene-time">[3:45 – 4:15] ACT V: Benchmarks, Evaluation & Conclusion</div>
+  <div class="scene-title">Technical Summary & Outro</div>
+  <div class="visuals"><strong>On-Screen:</strong> Summary graphic displaying 31.5 dB PSNR, 0.938 SSIM, 60 FPS WebGL rendering, and GitHub / Techfest portal submission links.</div>
+  <div class="dialogue">
+    "With 31.5 dB PSNR, sub-35 megabyte delivery, and sustained 60 FPS performance across desktop and mobile browsers, Namma Space delivers a sound, accessible, and high-fidelity indoor mapping engine. Thank you for viewing our Round 1 presentation for Techfest IIT Bombay."
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "units": "m",
+    "up": "Y",
+    "floor_y": 0.0,
+    "scale_method": "colmap_relative"
+  },
+  "nodes": [
+    {
+      "id": "n000",
+      "position": [
+        0.0,
+        1.65,
+        0.0
+      ],
+      "rotation": [
+        0.783165,
+        0.0,
+        0.620911,
+        0.033504
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n000.jpg",
+        "lod_url": "panos/n000_lod.jpg",
+        "depth_url": "depth/n000.png"
+      },
+      "neighbors": []
+    }
+  ],
+  "proxy_mesh": "mesh/proxy.glb",
+  "navmesh": "mesh/navmesh.glb",
+  "navgrid": "nav/navgrid.json"
+}

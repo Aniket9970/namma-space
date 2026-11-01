@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    { "source": "/api/scenes", "destination": "/static/scenes.json" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

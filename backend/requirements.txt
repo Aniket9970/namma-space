@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-multipart
+aiofiles
+pydantic
+sqlalchemy[asyncio]
+greenlet
+aiosqlite
+trimesh
+numpy
+scipy
+fuzzywuzzy
+python-Levenshtein

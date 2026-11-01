@@ -1,0 +1,70 @@
+[
+  {
+    "id": "poi_n000",
+    "name": "Main Entrance",
+    "category": "Entrance",
+    "aliases": [
+      "main entrance",
+      "spot 1",
+      "room 1"
+    ],
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "node_id": "n000",
+    "source": "manual"
+  },
+  {
+    "id": "poi_n001",
+    "name": "Node N001",
+    "category": "Navigation",
+    "aliases": [
+      "node n001",
+      "spot 2",
+      "room 2"
+    ],
+    "position": [
+      0.168,
+      0.0,
+      -2.379
+    ],
+    "node_id": "n001",
+    "source": "manual"
+  },
+  {
+    "id": "poi_n002",
+    "name": "Node N002",
+    "category": "Navigation",
+    "aliases": [
+      "node n002",
+      "spot 3",
+      "room 3"
+    ],
+    "position": [
+      0.146,
+      0.0,
+      -2.033
+    ],
+    "node_id": "n002",
+    "source": "manual"
+  },
+  {
+    "id": "poi_n003",
+    "name": "Node N003",
+    "category": "Navigation",
+    "aliases": [
+      "node n003",
+      "spot 4",
+      "room 4"
+    ],
+    "position": [
+      -0.054,
+      0.0,
+      -0.7
+    ],
+    "node_id": "n003",
+    "source": "manual"
+  }
+]

@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+.npm
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+!backend/namma_space.db
+
+# Models and large binary outputs (served from frontend/public/static)
+backend/static/
+
+
+# Reconstruction outputs
+reconstruction/output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Misc
+.cache/
+tmp/
+temp/

@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "units": "m",
+    "up": "Y",
+    "floor_y": 0.0,
+    "scale_method": "colmap_relative"
+  },
+  "nodes": [
+    {
+      "id": "n000",
+      "position": [
+        0.0,
+        1.65,
+        0.0
+      ],
+      "rotation": [
+        -0.068061,
+        0.0,
+        -0.004355,
+        0.997672
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n000.jpg",
+        "lod_url": "panos/n000_lod.jpg",
+        "depth_url": "depth/n000.png"
+      },
+      "neighbors": [
+        "n001",
+        "n002",
+        "n003"
+      ]
+    },
+    {
+      "id": "n001",
+      "position": [
+        1.39,
+        1.65,
+        -2.174
+      ],
+      "rotation": [
+        0.058788,
+        -0.07864,
+        -0.059813,
+        0.993369
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n001.jpg",
+        "lod_url": "panos/n001_lod.jpg",
+        "depth_url": "depth/n001.png"
+      },
+      "neighbors": [
+        "n000",
+        "n002",
+        "n003"
+      ]
+    },
+    {
+      "id": "n002",
+      "position": [
+        0.791,
+        1.65,
+        0.317
+      ],
+      "rotation": [
+        0.050396,
+        0.994632,
+        0.090165,
+        -0.006076
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n002.jpg",
+        "lod_url": "panos/n002_lod.jpg",
+        "depth_url": "depth/n002.png"
+      },
+      "neighbors": [
+        "n001",
+        "n003",
+        "n000"
+      ]
+    },
+    {
+      "id": "n003",
+      "position": [
+        1.993,
+        1.65,
+        -1.894
+      ],
+      "rotation": [
+        0.057408,
+        -0.032916,
+        0.990327,
+        -0.121957
+      ],
+      "pano": {
+        "type": "equirect",
+        "url": "panos/n003.jpg",
+        "lod_url": "panos/n003_lod.jpg",
+        "depth_url": "depth/n003.png"
+      },
+      "neighbors": [
+        "n002",
+        "n000",
+        "n001"
+      ]
+    }
+  ],
+  "proxy_mesh": "mesh/proxy.glb",
+  "navmesh": "mesh/navmesh.glb",
+  "navgrid": "nav/navgrid.json"
+}

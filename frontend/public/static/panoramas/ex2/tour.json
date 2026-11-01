@@ -1,0 +1,108 @@
+{
+  "slug": "ex2",
+  "default_node": "node_0",
+  "nodes": [
+    {
+      "id": "node_0",
+      "name": "Entrance Foyer",
+      "position": [
+        4.516,
+        1.65,
+        -3.008
+      ],
+      "image_url": "/static/panoramas/ex2/node_0.jpg",
+      "connections": [
+        "node_1"
+      ]
+    },
+    {
+      "id": "node_1",
+      "name": "Living Room View A",
+      "position": [
+        3.15,
+        1.65,
+        -2.6
+      ],
+      "image_url": "/static/panoramas/ex2/node_1.jpg",
+      "connections": [
+        "node_0",
+        "node_2"
+      ]
+    },
+    {
+      "id": "node_2",
+      "name": "Living Room View B",
+      "position": [
+        0.321,
+        1.65,
+        -1.226
+      ],
+      "image_url": "/static/panoramas/ex2/node_2.jpg",
+      "connections": [
+        "node_1",
+        "node_3",
+        "node_4"
+      ]
+    },
+    {
+      "id": "node_3",
+      "name": "Dining / Hallway",
+      "position": [
+        -2.486,
+        1.65,
+        0.297
+      ],
+      "image_url": "/static/panoramas/ex2/node_3.jpg",
+      "connections": [
+        "node_2",
+        "node_4",
+        "node_5",
+        "node_6"
+      ]
+    },
+    {
+      "id": "node_4",
+      "name": "Kitchenette Area",
+      "position": [
+        -1.861,
+        1.65,
+        -0.252
+      ],
+      "image_url": "/static/panoramas/ex2/node_4.jpg",
+      "connections": [
+        "node_3",
+        "node_5",
+        "node_2"
+      ]
+    },
+    {
+      "id": "node_5",
+      "name": "Bedroom Suite",
+      "position": [
+        -4.136,
+        1.65,
+        1.306
+      ],
+      "image_url": "/static/panoramas/ex2/node_5.jpg",
+      "connections": [
+        "node_4",
+        "node_6",
+        "node_3"
+      ]
+    },
+    {
+      "id": "node_6",
+      "name": "Balcony / Window View",
+      "position": [
+        -4.511,
+        1.65,
+        2.501
+      ],
+      "image_url": "/static/panoramas/ex2/node_6.jpg",
+      "connections": [
+        "node_5",
+        "node_3"
+      ]
+    }
+  ]
+}

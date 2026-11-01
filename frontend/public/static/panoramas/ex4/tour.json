@@ -1,0 +1,114 @@
+{
+  "slug": "ex4",
+  "default_node": "node_0",
+  "nodes": [
+    {
+      "id": "node_0",
+      "name": "Entrance Foyer",
+      "position": [
+        0.118,
+        1.65,
+        -5.956
+      ],
+      "image_url": "/static/panoramas/ex4/node_0.jpg",
+      "connections": [
+        "node_1",
+        "node_4",
+        "node_5"
+      ]
+    },
+    {
+      "id": "node_1",
+      "name": "Living Room View A",
+      "position": [
+        -0.053,
+        1.65,
+        -4.112
+      ],
+      "image_url": "/static/panoramas/ex4/node_1.jpg",
+      "connections": [
+        "node_0",
+        "node_2",
+        "node_4",
+        "node_5"
+      ]
+    },
+    {
+      "id": "node_2",
+      "name": "Living Room View B",
+      "position": [
+        -0.026,
+        1.65,
+        4.655
+      ],
+      "image_url": "/static/panoramas/ex4/node_2.jpg",
+      "connections": [
+        "node_1",
+        "node_3",
+        "node_6"
+      ]
+    },
+    {
+      "id": "node_3",
+      "name": "Dining / Hallway",
+      "position": [
+        -1.184,
+        1.65,
+        0.894
+      ],
+      "image_url": "/static/panoramas/ex4/node_3.jpg",
+      "connections": [
+        "node_2",
+        "node_4",
+        "node_6"
+      ]
+    },
+    {
+      "id": "node_4",
+      "name": "Kitchenette Area",
+      "position": [
+        -0.266,
+        1.65,
+        -2.551
+      ],
+      "image_url": "/static/panoramas/ex4/node_4.jpg",
+      "connections": [
+        "node_3",
+        "node_5",
+        "node_0",
+        "node_1"
+      ]
+    },
+    {
+      "id": "node_5",
+      "name": "Bedroom Suite",
+      "position": [
+        0.622,
+        1.65,
+        -3.308
+      ],
+      "image_url": "/static/panoramas/ex4/node_5.jpg",
+      "connections": [
+        "node_4",
+        "node_6",
+        "node_0",
+        "node_1"
+      ]
+    },
+    {
+      "id": "node_6",
+      "name": "Balcony / Window View",
+      "position": [
+        1.357,
+        1.65,
+        1.727
+      ],
+      "image_url": "/static/panoramas/ex4/node_6.jpg",
+      "connections": [
+        "node_5",
+        "node_2",
+        "node_3"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+# Namma Space - Configuration Specification
+# Techfest IIT Bombay 2026-27
+
+general:
+  units: "m"
+  coordinate_system: "Y-up"
+  target_floor_y: 0.0
+  eye_height: 1.65
+  scale_method: "colmap_relative" # "reference", "arcore", "colmap_relative"
+  reference_dimension_m: 2.0     # Default metric reference (e.g., standard door height)
+
+frame_sampling:
+  fps: 2.5                       # Keyframe extraction rate (1 frame every 0.4s)
+  blur_threshold: 15.0           # Laplacian variance threshold (0 to disable)
+  quality: 95                    # JPEG output quality
+  max_dimension: 1920            # Max image dimension for processing
+
+pose_backend:
+  backend: "auto"                # "colmap", "vggt", "auto" (vggt with colmap fallback)
+  colmap:
+    camera_model: "SIMPLE_RADIAL"
+    single_camera: true
+    feature_max_size: 1600
+    max_features: 8192
+    num_threads: 12              # Balanced CPU thread count (runs on P-cores, cool & quiet)
+    matching_overlap: 15
+    use_gpu: false               # Default to CPU on Windows without GPU COLMAP build
+  vggt:
+    window_size: 16              # Chunked window size to fit 8GB VRAM
+    window_overlap: 4            # Overlap between consecutive chunks
+    device: "cuda"
+
+floor_alignment:
+  ransac_threshold_m: 0.05       # 5 cm RANSAC distance threshold
+  min_inlier_ratio: 0.15         # Minimum points supporting floor plane
+  search_height_fraction: 0.4    # Focus search in bottom 40% of point cloud
+  max_iterations: 2000
+
+panoramas:
+  node_spacing_m: 2.5            # Target distance between panoramic vantage points
+  min_node_spacing_m: 1.5        # Minimum distance to avoid redundant nodes
+  equirect_width: 4096           # High-resolution production equirectangular panorama
+  equirect_height: 2048
+  lod_width: 1024                # Fast first-load preview resolution
+  lod_height: 512
+  blending: "multiband"          # "multiband", "linear", "feather"
+  frame_window: 5                # Adjacent keyframe window around vantage point
+
+depth_proxy:
+  backend: "depth_anything_v2"   # "pano_depth", "depth_anything_v2", "sfm_fallback"
+  device: "cuda"
+  tsdf_voxel_length_m: 0.04      # 4 cm TSDF voxel resolution
+  tsdf_sdf_trunc_m: 0.16         # Truncation distance (4x voxel length)
+  max_triangles: 50000           # Decimation limit for < 5 MB proxy.glb
+  target_max_size_mb: 5.0
+  align_to_sfm_points: true      # Least-squares scale and shift alignment to SfM points
+
+navigation:
+  grid_resolution_m: 0.05        # 5 cm grid resolution
+  obstacle_slice_min_y: 0.20     # Obstacle height window: 0.20 m (above baseboards)
+  obstacle_slice_max_y: 1.80     # Obstacle height window: 1.80 m (below ceiling)
+  agent_radius_m: 0.30           # 30 cm inflation around all walls and obstacles
+  morphological_kernel: 3        # Morphological opening kernel size
+  min_cluster_cells: 8           # Filter out noisy isolated pixel clusters
+  planner: "astar"               # "astar", "thetastar"
+
+photoreal_splat:
+  enabled: true                  # 3DGS high-precision training
+  iterations: 15000              # Full densification & convergence (up from 7000)
+  data_device: "cpu"             # Dataset in 32GB RAM, allows 80-90% GPU VRAM for Gaussians & rasterizer
+  resolution_scale: -1           # -1 = High-definition 1.6K/1080p crisp fidelity (no 2x blur downsampling)
+  densify_grad_threshold: 0.00015 # High precision splitting for crisp edges and fine text
+  sh_degree: 3                   # Full 3rd order spherical harmonics for view-dependent specular reflections
+
