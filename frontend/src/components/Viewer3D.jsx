@@ -564,7 +564,7 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
 
   const splatUrl = useMemo(() => {
     return currentScene?.splat_path || DEFAULT_SCENES[0]?.splat_path || '/static/models/sample_scene.splat'
-  }, [currentScene])
+  }, [currentScene?.splat_path])
   const navgridUrl = currentScene?.tour_path
     ? `${currentScene.tour_path.substring(0, currentScene.tour_path.lastIndexOf('/'))}/nav/navgrid.json`
     : '/static/navigation/navgrid.json'
@@ -576,23 +576,35 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
     total: 0,
   })
 
-  // Reset loading progress whenever scene / splatUrl changes
+  // Set of URLs that have already completed loading to prevent any re-triggering
+  const loadedUrlsRef = useRef(new Set())
+
+  // Reset loading progress ONLY when a brand new, un-cached splatUrl is loaded
   useEffect(() => {
+    if (loadedUrlsRef.current.has(splatUrl)) {
+      setSplatLoadingProgress({ loading: false, percent: 100, loaded: 0, total: 0 })
+      return
+    }
     setSplatLoadingProgress({ loading: true, percent: 0, loaded: 0, total: 0 })
-    // Safety auto-dismiss: if splats finish rendering or network takes max 18s, dismiss loading HUD
+    // Safety auto-dismiss: if splats finish rendering or network takes max 20s, dismiss loading HUD
     const timer = setTimeout(() => {
       setSplatLoadingProgress((prev) => ({ ...prev, loading: false }))
-    }, 18000)
+    }, 20000)
     return () => clearTimeout(timer)
   }, [splatUrl])
 
   const handleSplatProgress = useCallback((p) => {
-    setSplatLoadingProgress({ loading: true, ...p })
+    setSplatLoadingProgress((prev) => {
+      // If already marked as loaded, NEVER open the popup again!
+      if (!prev.loading) return prev
+      return { ...prev, ...p }
+    })
   }, [])
 
   const handleSplatLoaded = useCallback(() => {
-    setSplatLoadingProgress((prev) => ({ ...prev, loading: false, percent: 100 }))
-  }, [])
+    if (splatUrl) loadedUrlsRef.current.add(splatUrl)
+    setSplatLoadingProgress({ loading: false, percent: 100, loaded: 0, total: 0 })
+  }, [splatUrl])
 
   const handleSyncPosition = useCallback(
     (pos, yaw) => {
@@ -931,79 +943,73 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
         </div>
       )}
 
-      {/* ── High-Tech HUD Loading Indicator ── */}
+      {/* ── High-Tech Top Loading Pill (Non-Obstructive) ── */}
       {splatLoadingProgress.loading && (
         <div
           style={{
             position: 'absolute',
-            top: '50%',
+            top: isMobile ? 54 : 18,
             left: '50%',
-            transform: 'translate(-50%, -50%)',
+            transform: 'translateX(-50%)',
             zIndex: 60,
-            background: 'rgba(10, 18, 30, 0.95)',
-            padding: isMobile ? '20px 24px' : '24px 36px',
-            borderRadius: 12,
-            border: '1px solid #00e5ff',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 229, 255, 0.3)',
+            background: 'rgba(10, 18, 30, 0.94)',
+            padding: '8px 16px',
+            borderRadius: 20,
+            border: '1px solid rgba(0, 229, 255, 0.5)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 229, 255, 0.25)',
             backdropFilter: 'blur(12px)',
-            textAlign: 'center',
-            width: 'min(320px, 86vw)',
-            maxWidth: '90vw',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            maxWidth: 'min(360px, 92vw)',
+            pointerEvents: 'auto',
           }}
         >
+          <div style={{ fontSize: 16 }}>⚡</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 120 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#00e5ff', fontWeight: 700, fontSize: 11, letterSpacing: '0.4px' }}>
+                Loading 3D Space
+              </span>
+              <span style={{ color: '#88a0b5', fontSize: 10, fontWeight: 600 }}>
+                {splatLoadingProgress.percent > 0 ? `${splatLoadingProgress.percent}%` : ''}
+              </span>
+            </div>
+            <div
+              style={{
+                width: '100%',
+                height: 4,
+                background: 'rgba(255, 255, 255, 0.12)',
+                borderRadius: 2,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.max(6, splatLoadingProgress.percent || 0)}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #0077ff, #00e5ff)',
+                  transition: 'width 0.2s ease-out',
+                  borderRadius: 2,
+                }}
+              />
+            </div>
+          </div>
           <button
             onClick={() => setSplatLoadingProgress((prev) => ({ ...prev, loading: false }))}
             style={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
               background: 'transparent',
               border: 'none',
               color: '#88a0b5',
-              fontSize: 16,
+              fontSize: 14,
               cursor: 'pointer',
-              padding: 4,
+              padding: '2px 4px',
+              lineHeight: 1,
             }}
-            title="Dismiss loading overlay"
+            title="Dismiss overlay"
           >
             ✕
           </button>
-          <div style={{ fontSize: 26, marginBottom: 8 }}>⚡</div>
-          <div
-            style={{
-              color: '#00e5ff',
-              fontWeight: 700,
-              fontSize: 15,
-              marginBottom: 6,
-              letterSpacing: '0.5px',
-            }}
-          >
-            Loading Photorealistic 3D Space
-          </div>
-          <div style={{ color: '#88a0b5', fontSize: 12, marginBottom: 14 }}>
-            {splatLoadingProgress.total > 0
-              ? `${(splatLoadingProgress.loaded / (1024 * 1024)).toFixed(1)} MB / ${(splatLoadingProgress.total / (1024 * 1024)).toFixed(1)} MB (${splatLoadingProgress.percent}%)`
-              : 'Streaming 3D Gaussian Splats...'}
-          </div>
-          <div
-            style={{
-              width: '100%',
-              height: 6,
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: 3,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: `${Math.max(6, splatLoadingProgress.percent || 0)}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, #0077ff, #00e5ff)',
-                transition: 'width 0.2s ease-out',
-                borderRadius: 3,
-              }}
-            />
-          </div>
         </div>
       )}
 

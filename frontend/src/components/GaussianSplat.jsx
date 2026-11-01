@@ -367,9 +367,6 @@ async function lazyLoad(shared) {
 
   shared.loaded = true
   shared.manager.itemEnd(shared.url)
-  if (typeof shared.onLoaded === 'function') {
-    shared.onLoaded()
-  }
 }
 
 function update(camera, shared, target) {
@@ -423,6 +420,15 @@ function connect(shared, target) {
   geometry.setAttribute('splatIndex', splatIndexes)
   geometry.instanceCount = 1
 
+  let loadedNotified = false
+  function notifyLoaded() {
+    if (loadedNotified) return
+    loadedNotified = true
+    if (typeof shared.onLoaded === 'function') {
+      shared.onLoaded()
+    }
+  }
+
   function listener(e) {
     if (target && e.data.key === target.uuid) {
       let indexes = new Uint32Array(e.data.indices)
@@ -430,9 +436,7 @@ function connect(shared, target) {
       geometry.attributes.splatIndex.needsUpdate = true
       geometry.instanceCount = indexes.length
       target.ready = true
-      if (typeof shared.onLoaded === 'function') {
-        shared.onLoaded()
-      }
+      notifyLoaded()
     }
   }
 
@@ -446,9 +450,7 @@ function connect(shared, target) {
       await new Promise((resolve) => setTimeout(resolve, 10))
     }
     target.ready = true
-    if (typeof shared.onLoaded === 'function') {
-      shared.onLoaded()
-    }
+    notifyLoaded()
   }
   wait()
 
