@@ -38,8 +38,11 @@ app.add_middleware(
 # ── Static files ──────────────────────────────────────────────────────────────
 from pathlib import Path
 _public_static = Path(__file__).resolve().parent.parent / "frontend" / "public" / "static"
-_static_dir = str(_public_static) if _public_static.is_dir() else "static"
-app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+_local_static = Path(__file__).resolve().parent / "static"
+if _public_static.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_public_static)), name="static")
+elif _local_static.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_local_static)), name="static")
 
 # ── Routers ──────────────────────────────────────────────────────────────────
 app.include_router(scenes.router, prefix="/api", tags=["scenes"])
