@@ -146,14 +146,17 @@ export default function Minimap({ navgridUrl }) {
 
   if (!navgridData) return null
 
-  const size = minimapOpen ? 460 : 180
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+  const defaultSize = isMobile ? 110 : 180
+  const openSize = isMobile ? Math.min(260, window.innerWidth - 32) : 460
+  const size = minimapOpen ? openSize : defaultSize
 
   return (
     <div
       style={{
         position: 'absolute',
-        bottom: 20,
-        right: 20,
+        bottom: isMobile ? 12 : 20,
+        right: isMobile ? 12 : 20,
         zIndex: 30,
         display: 'flex',
         flexDirection: 'column',

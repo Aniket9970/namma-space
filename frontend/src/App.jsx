@@ -14,6 +14,22 @@ export default function App() {
   // POI placement state
   const [pendingPosition, setPendingPosition] = useState(null)
 
+  // Mobile viewport detection
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  })
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+      setIsMobile(mobile)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   // Scene picker state (pre-populate with default scenes so UI is instant)
   const [scenes, setScenes] = useState(DEFAULT_SCENES)
   const [showScenePicker, setShowScenePicker] = useState(false)
@@ -78,15 +94,37 @@ export default function App() {
 
   return (
     <div style={styles.root}>
-      {/* Sidebar */}
-      <Sidebar />
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <div style={{ width: 280, minWidth: 280, height: '100%' }}>
+          <Sidebar />
+        </div>
+      )}
+
+      {/* Mobile Sidebar Drawer Modal */}
+      {isMobile && sidebarOpen && (
+        <div style={styles.mobileDrawerOverlay} onClick={() => setSidebarOpen(false)}>
+          <div style={styles.mobileDrawerPanel} onClick={(e) => e.stopPropagation()}>
+            <Sidebar onClose={() => setSidebarOpen(false)} />
+          </div>
+        </div>
+      )}
 
       {/* 3D Viewer */}
       <div style={styles.canvasWrapper}>
-        <Viewer3D onPOIPlace={handlePOIPlace} />
+        <Viewer3D onPOIPlace={handlePOIPlace} isMobile={isMobile} />
 
         {/* Top bar */}
         <div style={styles.topBar}>
+          {isMobile && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              style={styles.mobileMenuBtn}
+            >
+              ☰ POIs
+            </button>
+          )}
+
           <button
             onClick={() => setShowScenePicker(true)}
             style={styles.topBarBtn}
@@ -94,11 +132,11 @@ export default function App() {
             🗂 {currentScene ? currentScene.name : 'Select Scene'}
           </button>
           {mode === 'poi-select' && (
-            <div style={styles.modeBadge}>📍 Double-click to place POI</div>
+            <div style={styles.modeBadge}>{isMobile ? '📍 Tap POI' : '📍 Double-click to place POI'}</div>
           )}
           {mode === 'navigate' && (
             <div style={{ ...styles.modeBadge, background: '#1a3010', borderColor: '#4caf50' }}>
-              🧭 Navigation Mode
+              🧭 Nav
             </div>
           )}
           {isLoading && <div style={styles.loadingBadge}>⏳ Loading…</div>}
@@ -185,15 +223,48 @@ export default function App() {
 const styles = {
   root: {
     display: 'flex',
-    width: '100vw',
-    height: '100vh',
+    width: '100%',
+    height: '100dvh',
     overflow: 'hidden',
     background: '#0a0a1a',
+    position: 'relative',
   },
   canvasWrapper: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     position: 'relative',
     overflow: 'hidden',
+  },
+  mobileDrawerOverlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0, 0, 0, 0.72)',
+    backdropFilter: 'blur(8px)',
+    zIndex: 999,
+    display: 'flex',
+    justifyContent: 'flex-start',
+  },
+  mobileDrawerPanel: {
+    width: 'min(320px, 86vw)',
+    height: '100%',
+    background: '#0d1117',
+    borderRight: '1px solid #1e3a5f',
+    boxShadow: '4px 0 24px rgba(0,0,0,0.8)',
+    display: 'flex',
+    flexDirection: 'column',
+    overflowY: 'auto',
+  },
+  mobileMenuBtn: {
+    background: 'rgba(0, 229, 255, 0.15)',
+    border: '1px solid #00e5ff',
+    borderRadius: 7,
+    color: '#00e5ff',
+    padding: '7px 12px',
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
+    backdropFilter: 'blur(8px)',
   },
   topBar: {
     position: 'absolute',
@@ -203,6 +274,9 @@ const styles = {
     gap: 8,
     alignItems: 'center',
     zIndex: 10,
+    maxWidth: 'calc(100vw - 24px)',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
   },
   topBarBtn: {
     background: 'rgba(13,17,23,0.85)',

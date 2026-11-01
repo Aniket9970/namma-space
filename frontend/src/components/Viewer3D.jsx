@@ -249,7 +249,7 @@ function POIPlacementHandler({ onPlace }) {
 }
 
 // ── 3DGS Dedicated WASD Roam Controller ───────────────────────────────────────
-function SplatWASDControls({ enabled, onSyncPosition }) {
+function SplatWASDControls({ enabled, onSyncPosition, virtualKeys }) {
   const { camera, gl } = useThree()
   const keys = useRef({ w: false, a: false, s: false, d: false, space: false, c: false, shift: false })
   const isLocked = useRef(false)
@@ -281,6 +281,35 @@ function SplatWASDControls({ enabled, onSyncPosition }) {
       pitch.current = Math.max(-MAX_PITCH_RAD, Math.min(MAX_PITCH_RAD, pitch.current))
     }
 
+    // Touch look support for mobile
+    let touchStartX = 0
+    let touchStartY = 0
+    let isTouching = false
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        isTouching = true
+        touchStartX = e.touches[0].clientX
+        touchStartY = e.touches[0].clientY
+      }
+    }
+
+    const onTouchMove = (e) => {
+      if (!isTouching || e.touches.length !== 1) return
+      const dx = e.touches[0].clientX - touchStartX
+      const dy = e.touches[0].clientY - touchStartY
+      touchStartX = e.touches[0].clientX
+      touchStartY = e.touches[0].clientY
+
+      yaw.current -= dx * 0.004
+      pitch.current -= dy * 0.004
+      pitch.current = Math.max(-MAX_PITCH_RAD, Math.min(MAX_PITCH_RAD, pitch.current))
+    }
+
+    const onTouchEnd = () => {
+      isTouching = false
+    }
+
     const onKeyDown = (e) => {
       const k = e.key.toLowerCase()
       if (k === 'w') keys.current.w = true
@@ -304,6 +333,10 @@ function SplatWASDControls({ enabled, onSyncPosition }) {
     }
 
     canvas.addEventListener('click', onClick)
+    canvas.addEventListener('touchstart', onTouchStart, { passive: true })
+    canvas.addEventListener('touchmove', onTouchMove, { passive: true })
+    canvas.addEventListener('touchend', onTouchEnd, { passive: true })
+    canvas.addEventListener('touchcancel', onTouchEnd, { passive: true })
     document.addEventListener('pointerlockchange', onPointerLockChange)
     document.addEventListener('mousemove', onMouseMove)
     window.addEventListener('keydown', onKeyDown)
@@ -311,6 +344,10 @@ function SplatWASDControls({ enabled, onSyncPosition }) {
 
     return () => {
       canvas.removeEventListener('click', onClick)
+      canvas.removeEventListener('touchstart', onTouchStart)
+      canvas.removeEventListener('touchmove', onTouchMove)
+      canvas.removeEventListener('touchend', onTouchEnd)
+      canvas.removeEventListener('touchcancel', onTouchEnd)
       document.removeEventListener('pointerlockchange', onPointerLockChange)
       document.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('keydown', onKeyDown)
@@ -331,10 +368,15 @@ function SplatWASDControls({ enabled, onSyncPosition }) {
     const speed = keys.current.shift ? SPRINT_SPEED : WALK_SPEED
     const move = new THREE.Vector3()
 
-    if (keys.current.w) move.z -= 1
-    if (keys.current.s) move.z += 1
-    if (keys.current.a) move.x -= 1
-    if (keys.current.d) move.x += 1
+    const isW = keys.current.w || virtualKeys?.w
+    const isS = keys.current.s || virtualKeys?.s
+    const isA = keys.current.a || virtualKeys?.a
+    const isD = keys.current.d || virtualKeys?.d
+
+    if (isW) move.z -= 1
+    if (isS) move.z += 1
+    if (isA) move.x -= 1
+    if (isD) move.x += 1
 
     if (move.lengthSq() > 0) {
       move.normalize().multiplyScalar(speed * delta)
@@ -416,7 +458,7 @@ function PhotorealisticSplat({
 }
 
 // ── Main 3D Viewer Root ───────────────────────────────────────────────────────
-export default function Viewer3D({ onPOIPlace }) {
+export default function Viewer3D({ onPOIPlace, isMobile = false }) {
   const {
     currentScene,
     pois,
@@ -430,7 +472,8 @@ export default function Viewer3D({ onPOIPlace }) {
   } = useStore()
 
   // Control mode: 'wasd' (First-person walk) vs 'orbit' (Inspect from outside)
-  const [controlMode, setControlMode] = useState('wasd')
+  const [controlMode, setControlMode] = useState(() => (isMobile ? 'orbit' : 'wasd'))
+  const [virtualKeys, setVirtualKeys] = useState({ w: false, a: false, s: false, d: false })
   const [invertY, setInvertY] = useState(false)
 
   // Orientation offsets
@@ -563,8 +606,9 @@ export default function Viewer3D({ onPOIPlace }) {
           zIndex: 25,
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 10,
+          gap: isMobile ? 6 : 10,
           alignItems: 'center',
+          maxWidth: isMobile ? 'calc(100vw - 28px)' : 'auto',
         }}
       >
         {/* 3DGS Controls Mode Selector Pill */}
@@ -587,17 +631,17 @@ export default function Viewer3D({ onPOIPlace }) {
               color: controlMode === 'wasd' ? '#0a101d' : '#00e5ff',
               border: 'none',
               borderRadius: 6,
-              padding: '6px 14px',
+              padding: isMobile ? '5px 10px' : '6px 14px',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 5,
+              gap: 4,
               transition: 'all 0.15s',
             }}
           >
-            🕹️ WASD Roam
+            {isMobile ? '🕹️ Roam' : '🕹️ WASD Roam'}
           </button>
           <button
             onClick={() => setControlMode('orbit')}
@@ -606,24 +650,24 @@ export default function Viewer3D({ onPOIPlace }) {
               color: controlMode === 'orbit' ? '#0a101d' : '#88a0b5',
               border: 'none',
               borderRadius: 6,
-              padding: '6px 14px',
+              padding: isMobile ? '5px 10px' : '6px 14px',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 5,
+              gap: 4,
               transition: 'all 0.15s',
             }}
           >
-            🔄 Orbit View
+            {isMobile ? '🔄 Orbit' : '🔄 Orbit View'}
           </button>
         </div>
 
-
-
-        {/* POI Search Bar with Fuse.js */}
-        <POISearchBar onNavigateToPOI={handleNavigateToPOI} />
+        {/* POI Search Bar with Fuse.js (hidden on very small mobile portrait to save space) */}
+        {(!isMobile || window.innerWidth > 480) && (
+          <POISearchBar onNavigateToPOI={handleNavigateToPOI} />
+        )}
 
         {/* Quick Orientation Buttons */}
         <div
@@ -640,35 +684,35 @@ export default function Viewer3D({ onPOIPlace }) {
         >
           <button
             onClick={handleRotateLeft}
-            title="Rotate 90 degrees to the left (counter-clockwise)"
+            title="Rotate 90 degrees left"
             style={{
               background: 'transparent',
               color: '#00e5ff',
               border: 'none',
               borderRadius: 6,
-              padding: '6px 10px',
+              padding: isMobile ? '5px 8px' : '6px 10px',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
             }}
           >
-            ↺ Rotate Left 90°
+            ↺ 90°
           </button>
           <button
             onClick={handleRotateRight}
-            title="Rotate 90 degrees to the right (clockwise)"
+            title="Rotate 90 degrees right"
             style={{
               background: 'transparent',
               color: '#00e5ff',
               border: 'none',
               borderRadius: 6,
-              padding: '6px 10px',
+              padding: isMobile ? '5px 8px' : '6px 10px',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
             }}
           >
-            ↻ Rotate Right 90°
+            ↻ 90°
           </button>
           <button
             onClick={() => setInvertY((v) => !v)}
@@ -678,13 +722,13 @@ export default function Viewer3D({ onPOIPlace }) {
               color: '#ffaa00',
               border: 'none',
               borderRadius: 6,
-              padding: '6px 10px',
+              padding: isMobile ? '5px 8px' : '6px 10px',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
             }}
           >
-            {invertY ? '🔄 Inverted' : '⬆️ Upright'}
+            {invertY ? '🔄 Invert' : '⬆️ Upright'}
           </button>
           {(rotationZ !== 0 || rotationX !== 0 || invertY) && (
             <button
@@ -695,13 +739,13 @@ export default function Viewer3D({ onPOIPlace }) {
                 color: '#ff6666',
                 border: '1px solid rgba(255, 60, 60, 0.3)',
                 borderRadius: 6,
-                padding: '6px 10px',
+                padding: isMobile ? '5px 8px' : '6px 10px',
                 fontSize: 11,
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
             >
-              Reset ({(Math.round((rotationZ * 180) / Math.PI) + 360) % 360}°)
+              Reset
             </button>
           )}
         </div>
@@ -710,10 +754,10 @@ export default function Viewer3D({ onPOIPlace }) {
       {/* ── 3D Canvas Viewport ── */}
       <CanvasErrorBoundary>
         <Canvas
-          dpr={[1, 2]}
+          dpr={[1, Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio : 2)]}
           gl={{ antialias: true, powerPreference: 'high-performance' }}
-          camera={{ position: [0, 1.65, 3.2], fov: 75, near: 0.1, far: 200 }}
-          style={{ background: '#0a0e14' }}
+          camera={{ position: [0, 1.65, 3.2], fov: isMobile ? 80 : 75, near: 0.1, far: 200 }}
+          style={{ background: '#0a0e14', touchAction: 'none' }}
         >
           <ambientLight intensity={1.8} />
           <directionalLight position={[10, 20, 10]} intensity={1.6} />
@@ -738,7 +782,11 @@ export default function Viewer3D({ onPOIPlace }) {
 
           {/* 2. Controls: First-Person WASD vs Orbit */}
           {controlMode === 'wasd' ? (
-            <SplatWASDControls enabled={true} onSyncPosition={handleSyncPosition} />
+            <SplatWASDControls
+              enabled={true}
+              onSyncPosition={handleSyncPosition}
+              virtualKeys={virtualKeys}
+            />
           ) : (
             <OrbitControls
               target={[0, 1.65, 0]}
@@ -760,6 +808,121 @@ export default function Viewer3D({ onPOIPlace }) {
         </Canvas>
       </CanvasErrorBoundary>
 
+      {/* ── Mobile Touch Roam D-Pad (Visible in Roam mode on mobile) ── */}
+      {isMobile && controlMode === 'wasd' && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 70,
+            left: 14,
+            zIndex: 40,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 6,
+            background: 'rgba(10, 20, 35, 0.85)',
+            padding: '8px 10px',
+            borderRadius: 14,
+            border: '1px solid rgba(0, 229, 255, 0.4)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(10px)',
+            userSelect: 'none',
+            touchAction: 'none',
+          }}
+        >
+          <button
+            onTouchStart={(e) => { e.preventDefault(); setVirtualKeys((k) => ({ ...k, w: true })) }}
+            onTouchEnd={() => setVirtualKeys((k) => ({ ...k, w: false }))}
+            onMouseDown={() => setVirtualKeys((k) => ({ ...k, w: true }))}
+            onMouseUp={() => setVirtualKeys((k) => ({ ...k, w: false }))}
+            style={{
+              width: 44,
+              height: 44,
+              background: 'rgba(0, 229, 255, 0.2)',
+              border: '1px solid #00e5ff',
+              borderRadius: 8,
+              color: '#00e5ff',
+              fontSize: 16,
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ▲
+          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onTouchStart={(e) => { e.preventDefault(); setVirtualKeys((k) => ({ ...k, a: true })) }}
+              onTouchEnd={() => setVirtualKeys((k) => ({ ...k, a: false }))}
+              onMouseDown={() => setVirtualKeys((k) => ({ ...k, a: true }))}
+              onMouseUp={() => setVirtualKeys((k) => ({ ...k, a: false }))}
+              style={{
+                width: 44,
+                height: 44,
+                background: 'rgba(0, 229, 255, 0.2)',
+                border: '1px solid #00e5ff',
+                borderRadius: 8,
+                color: '#00e5ff',
+                fontSize: 16,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ◀
+            </button>
+            <button
+              onTouchStart={(e) => { e.preventDefault(); setVirtualKeys((k) => ({ ...k, s: true })) }}
+              onTouchEnd={() => setVirtualKeys((k) => ({ ...k, s: false }))}
+              onMouseDown={() => setVirtualKeys((k) => ({ ...k, s: true }))}
+              onMouseUp={() => setVirtualKeys((k) => ({ ...k, s: false }))}
+              style={{
+                width: 44,
+                height: 44,
+                background: 'rgba(0, 229, 255, 0.2)',
+                border: '1px solid #00e5ff',
+                borderRadius: 8,
+                color: '#00e5ff',
+                fontSize: 16,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ▼
+            </button>
+            <button
+              onTouchStart={(e) => { e.preventDefault(); setVirtualKeys((k) => ({ ...k, d: true })) }}
+              onTouchEnd={() => setVirtualKeys((k) => ({ ...k, d: false }))}
+              onMouseDown={() => setVirtualKeys((k) => ({ ...k, d: true }))}
+              onMouseUp={() => setVirtualKeys((k) => ({ ...k, d: false }))}
+              style={{
+                width: 44,
+                height: 44,
+                background: 'rgba(0, 229, 255, 0.2)',
+                border: '1px solid #00e5ff',
+                borderRadius: 8,
+                color: '#00e5ff',
+                fontSize: 16,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ▶
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── High-Tech HUD Loading Indicator ── */}
       {splatLoadingProgress.loading && (
         <div
@@ -770,13 +933,14 @@ export default function Viewer3D({ onPOIPlace }) {
             transform: 'translate(-50%, -50%)',
             zIndex: 60,
             background: 'rgba(10, 18, 30, 0.95)',
-            padding: '24px 36px',
+            padding: isMobile ? '20px 24px' : '24px 36px',
             borderRadius: 12,
             border: '1px solid #00e5ff',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 229, 255, 0.3)',
             backdropFilter: 'blur(12px)',
             textAlign: 'center',
-            minWidth: 320,
+            width: 'min(320px, 86vw)',
+            maxWidth: '90vw',
             pointerEvents: 'none',
           }}
         >
@@ -829,18 +993,25 @@ export default function Viewer3D({ onPOIPlace }) {
           bottom: 16,
           left: 16,
           background: 'rgba(10, 20, 35, 0.88)',
-          padding: '8px 16px',
+          padding: '8px 14px',
           borderRadius: 8,
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: 600,
           color: '#00e5ff',
           border: '1px solid rgba(0, 229, 255, 0.25)',
           boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
           pointerEvents: 'none',
           backdropFilter: 'blur(8px)',
+          maxWidth: 'calc(100vw - 32px)',
         }}
       >
-        {controlMode === 'wasd' ? (
+        {isMobile ? (
+          controlMode === 'wasd' ? (
+            <span>📱 <strong>Swipe screen</strong> to look • <strong>Touch D-Pad</strong> to walk</span>
+          ) : (
+            <span>📱 <strong>1-Finger drag</strong> to rotate • <strong>Pinch</strong> to zoom</span>
+          )
+        ) : controlMode === 'wasd' ? (
           <span>
             🕹️ <strong>Click screen to lock mouse</strong> | <strong>W A S D</strong> to walk | <strong>Shift</strong> to sprint | <strong>Space / C</strong> to fly up/down | <strong>Esc</strong> to unlock cursor
           </span>

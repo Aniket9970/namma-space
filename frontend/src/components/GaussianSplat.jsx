@@ -75,7 +75,9 @@ const SplatMaterial = shaderMaterial(
       float radius = length(vec2((diagonal1 - diagonal2) / 2.0, offDiagonal));
       float lambda1 = mid + radius;
       float lambda2 = max(mid - radius, 0.1);
-      vec2 diagonalVector = normalize(vec2(offDiagonal, lambda1 - diagonal1));
+      vec2 diagDiff = vec2(offDiagonal, lambda1 - diagonal1);
+      float dLen = length(diagDiff);
+      vec2 diagonalVector = dLen > 0.0001 ? diagDiff / dLen : vec2(1.0, 0.0);
       vec2 v1 = min(sqrt(2.0 * lambda1), 1024.0) * diagonalVector;
       vec2 v2 = min(sqrt(2.0 * lambda2), 1024.0) * vec2(diagonalVector.y, -diagonalVector.x);
       uint colorUint = covAndColorData.w;
@@ -114,14 +116,24 @@ const SplatMaterial = shaderMaterial(
 function createSortWorker(self) {
   let matrices = null
   let offset = 0
+  let depthList = null
+  let sizeList = null
+  let validIndexList = null
+  const counts0 = new Uint32Array(256 * 256)
+  const starts0 = new Uint32Array(256 * 256)
+
   function sortSplats(view) {
     const vertexCount = matrices.length / 16
     const threshold = -0.0001
     let maxDepth = -Infinity
     let minDepth = Infinity
-    const depthList = new Float32Array(vertexCount)
-    const sizeList = new Int32Array(depthList.buffer)
-    const validIndexList = new Int32Array(vertexCount)
+
+    if (!depthList || depthList.length !== vertexCount) {
+      depthList = new Float32Array(vertexCount)
+      sizeList = new Int32Array(depthList.buffer)
+      validIndexList = new Int32Array(vertexCount)
+    }
+
     let validCount = 0
 
     for (let i = 0; i < vertexCount; i++) {
@@ -140,13 +152,13 @@ function createSortWorker(self) {
       }
     }
 
+    counts0.fill(0)
     const depthInv = (256 * 256 - 1) / (maxDepth - minDepth)
-    const counts0 = new Uint32Array(256 * 256)
     for (let i = 0; i < validCount; i++) {
       sizeList[i] = ((depthList[i] - minDepth) * depthInv) | 0
       counts0[sizeList[i]]++
     }
-    const starts0 = new Uint32Array(256 * 256)
+    starts0[0] = 0
     for (let i = 1; i < 256 * 256; i++) starts0[i] = starts0[i - 1] + counts0[i - 1]
     const depthIndex = new Uint32Array(validCount)
     for (let i = 0; i < validCount; i++) depthIndex[starts0[sizeList[i]]++] = validIndexList[i]

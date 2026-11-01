@@ -84,7 +84,7 @@ export function SearchBar({ sceneId }) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-export default function Sidebar() {
+export default function Sidebar({ onClose }) {
   const { currentScene, scenes, setScene, pois, selectedPOI, mode, setMode, navigationPath, clearSelection } = useStore((s) => ({
     currentScene: s.currentScene,
     scenes: s.scenes || [],
@@ -100,6 +100,27 @@ export default function Sidebar() {
 
   return (
     <aside style={styles.sidebar}>
+      {/* Mobile Drawer Close Button */}
+      {onClose && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 14px 0' }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'rgba(255, 60, 60, 0.15)',
+              border: '1px solid rgba(255, 60, 60, 0.4)',
+              borderRadius: 6,
+              color: '#ff6666',
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            ✕ Close Menu
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.logo}>🏠 Namma Space</div>
@@ -245,9 +266,9 @@ export default function Sidebar() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = {
   sidebar: {
-    width: 280,
-    minWidth: 280,
-    height: '100vh',
+    width: '100%',
+    height: '100%',
+    maxHeight: '100dvh',
     background: 'linear-gradient(180deg, #0d1117 0%, #111827 100%)',
     borderRight: '1px solid #1e3a5f',
     display: 'flex',
