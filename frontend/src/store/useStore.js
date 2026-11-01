@@ -7,6 +7,7 @@ const initialScene = DEFAULT_SCENES.find((s) => s.splat_path?.includes('sample_s
 const useStore = create((set, get) => ({
   // ── Scene & Tour State ───────────────────────────────────────────────────────
   currentScene: initialScene,        // Scene object from API / fallback
+  scenes: DEFAULT_SCENES,            // List of available 3D rooms / scenes
   tourData: null,            // TourManifest from tour.json
   activeNodeId: null,        // Current panorama node ID (e.g. 'n000')
   tourMode: 'photosphere',   // 'photosphere' | 'freeroam' | 'dollhouse' | 'splat'
@@ -27,6 +28,7 @@ const useStore = create((set, get) => ({
 
   // ── Actions ────────────────────────────────────────────────────────────────
   setScene: (scene) => set({ currentScene: scene }),
+  setScenes: (scenes) => set({ scenes }),
   setTourData: (tourData) => {
     const firstNode = tourData?.nodes?.[0]?.id || null
     set({

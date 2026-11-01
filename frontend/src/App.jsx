@@ -8,7 +8,7 @@ import { getScenes, createScene } from './api/index.js'
 import { DEFAULT_SCENES } from './api/scenesData.js'
 
 export default function App() {
-  const { currentScene, mode, setScene, isLoading } = useStore()
+  const { currentScene, mode, setScene, setScenes: setStoreScenes, isLoading } = useStore()
   const { fetchPOIs, submitPOI } = usePOIs()
 
   // POI placement state
@@ -26,10 +26,11 @@ export default function App() {
       .then((data) => {
         if (data && data.length > 0) {
           setScenes(data)
+          setStoreScenes(data)
         }
       })
       .catch((e) => console.error('Failed to load scenes:', e))
-  }, [])
+  }, [setStoreScenes])
 
   // Load POIs when scene changes
   useEffect(() => {

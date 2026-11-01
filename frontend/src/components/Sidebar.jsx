@@ -85,8 +85,10 @@ export function SearchBar({ sceneId }) {
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 export default function Sidebar() {
-  const { currentScene, pois, selectedPOI, mode, setMode, navigationPath, clearSelection } = useStore((s) => ({
+  const { currentScene, scenes, setScene, pois, selectedPOI, mode, setMode, navigationPath, clearSelection } = useStore((s) => ({
     currentScene: s.currentScene,
+    scenes: s.scenes || [],
+    setScene: s.setScene,
     pois: s.pois,
     selectedPOI: s.selectedPOI,
     mode: s.mode,
@@ -104,10 +106,42 @@ export default function Sidebar() {
         {currentScene && (
           <div style={styles.sceneName}>
             <span>{currentScene.name}</span>
-            <span style={styles.badge}>GLB</span>
+            <span style={styles.badge}>3D ROOM</span>
           </div>
         )}
       </div>
+
+      {/* 3D Room Switcher */}
+      {scenes && scenes.length > 0 && (
+        <div style={styles.section}>
+          <div style={styles.sectionLabel}>Select 3D Model / Room</div>
+          <select
+            value={currentScene?.id || ''}
+            onChange={(e) => {
+              const selected = scenes.find((s) => String(s.id) === e.target.value)
+              if (selected) setScene(selected)
+            }}
+            style={{
+              width: '100%',
+              background: '#161f30',
+              border: '1px solid #1e3a5f',
+              borderRadius: 7,
+              color: '#00e5ff',
+              padding: '8px 10px',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {scenes.map((s) => (
+              <option key={s.id} value={s.id}>
+                🏛️ {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Mode toggle */}
       <div style={styles.modeBar}>
