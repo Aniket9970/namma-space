@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from database import create_tables
-from routers import navigation, pois, scenes
+from routers import navigation, pois, reconstruction, scenes
 
 
 @asynccontextmanager
@@ -29,10 +29,7 @@ app = FastAPI(
 # ── CORS ─────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,6 +45,7 @@ app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 app.include_router(scenes.router, prefix="/api", tags=["scenes"])
 app.include_router(pois.router, prefix="/api", tags=["pois"])
 app.include_router(navigation.router, prefix="/api", tags=["navigation"])
+app.include_router(reconstruction.router, prefix="/api", tags=["reconstruction"])
 
 
 @app.get("/api/health", tags=["health"])

@@ -2,10 +2,20 @@
 database.py — Async SQLAlchemy setup for Namma Space.
 """
 
+import os
+import shutil
+from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-DATABASE_URL = "sqlite+aiosqlite:///./namma_space.db"
+DB_PATH = Path(__file__).resolve().parent / "namma_space.db"
+if os.environ.get("VERCEL"):
+    tmp_db = Path("/tmp/namma_space.db")
+    if DB_PATH.exists() and not tmp_db.exists():
+        shutil.copy(DB_PATH, tmp_db)
+    DATABASE_URL = f"sqlite+aiosqlite:///{tmp_db}"
+else:
+    DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 
 engine = create_async_engine(DATABASE_URL, echo=False, future=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)

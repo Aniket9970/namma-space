@@ -1,8 +1,0 @@
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/api/scenes", "destination": "/static/scenes.json" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
