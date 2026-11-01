@@ -113,6 +113,7 @@ const SplatMaterial = shaderMaterial(
 // ── Web Worker for 16-bit Counting Depth Sorting ──────────────────────────────
 function createSortWorker(self) {
   let matrices = null
+  let offset = 0
   function sortSplats(view) {
     const vertexCount = matrices.length / 16
     const threshold = -0.0001
@@ -154,7 +155,10 @@ function createSortWorker(self) {
 
   self.onmessage = (e) => {
     if (e.data.method === 'push') {
-      matrices = new Float32Array(e.data.matrices)
+      if (offset === 0) matrices = new Float32Array(e.data.length)
+      const new_matrices = new Float32Array(e.data.matrices)
+      matrices.set(new_matrices, offset)
+      offset += new_matrices.length
     } else if (e.data.method === 'sort') {
       if (matrices !== null) {
         const indices = sortSplats(new Float32Array(e.data.view))
@@ -170,6 +174,7 @@ class RobustSplatLoader extends THREE.Loader {
     super(...args)
     this.gl = null
     this.chunkSize = 25000
+    this.onProgress = null
   }
 
   load(url, onLoad, onProgress, onError) {
@@ -202,7 +207,7 @@ class RobustSplatLoader extends THREE.Loader {
       covAndColorData: null,
       covAndColorTexture: null,
       centerAndScaleTexture: null,
-      onProgress,
+      onProgress: onProgress || this.onProgress,
     }
 
     loadShared(shared)
@@ -222,21 +227,40 @@ async function loadShared(shared) {
     throw new Error(`Failed to fetch splat file "${shared.url}": ${data.status}`)
   }
 
-  let totalDownloadBytes
-  let fullBuffer = null
+  let totalDownloadBytes = 0
   const lenHeader = data.headers.get('Content-Length')
-
-  if (lenHeader && parseInt(lenHeader) > 0) {
-    totalDownloadBytes = parseInt(lenHeader)
-    shared.stream = data.body.getReader()
-  } else {
-    // Vercel / Cloudflare Brotli chunked mode: read entire arrayBuffer directly!
-    fullBuffer = await data.arrayBuffer()
-    totalDownloadBytes = fullBuffer.byteLength
-    shared.fullBuffer = fullBuffer
+  if (lenHeader) {
+    totalDownloadBytes = parseInt(lenHeader, 10) || 0
   }
 
-  shared.totalDownloadBytes = totalDownloadBytes
+  const reader = data.body.getReader()
+  const chunks = []
+  let bytesDownloaded = 0
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+    bytesDownloaded += value.length
+    if (shared.onProgress && totalDownloadBytes > 0) {
+      shared.onProgress({
+        loaded: bytesDownloaded,
+        total: totalDownloadBytes,
+        percent: Math.min(100, Math.round((bytesDownloaded / totalDownloadBytes) * 100)),
+      })
+    }
+  }
+
+  const fullArray = new Uint8Array(bytesDownloaded)
+  let offset = 0
+  for (const chunk of chunks) {
+    fullArray.set(chunk, offset)
+    offset += chunk.length
+  }
+  chunks.length = 0
+
+  shared.fullBuffer = fullArray.buffer
+  shared.totalDownloadBytes = bytesDownloaded
   shared.numVertices = Math.floor(shared.totalDownloadBytes / shared.rowLength)
 
   const context = shared.gl.getContext()
@@ -272,92 +296,41 @@ async function loadShared(shared) {
   return shared
 }
 
+async function ensureTextures(shared) {
+  if (shared.gl && shared.gl.initTexture) {
+    try {
+      shared.gl.initTexture(shared.centerAndScaleTexture)
+      shared.gl.initTexture(shared.covAndColorTexture)
+    } catch (e) {
+      console.warn('[RobustSplatLoader] initTexture fallback:', e)
+    }
+  }
+
+  for (let i = 0; i < 40; i++) {
+    const p1 = shared.gl.properties.get(shared.centerAndScaleTexture)
+    const p2 = shared.gl.properties.get(shared.covAndColorTexture)
+    if (p1?.__webglTexture && p2?.__webglTexture) return true
+    await new Promise((r) => setTimeout(r, 16))
+  }
+  return false
+}
+
 async function lazyLoad(shared) {
   shared.loading = true
 
-  if (shared.fullBuffer) {
-    // Process full buffer directly
-    const vertexCount = Math.floor(shared.fullBuffer.byteLength / shared.rowLength)
-    const matrices = pushDataBuffer(shared, shared.fullBuffer, vertexCount)
-    shared.worker.postMessage(
-      {
-        method: 'push',
-        src: shared.url,
-        length: shared.numVertices * 16,
-        matrices: matrices.buffer,
-      },
-      [matrices.buffer]
-    )
-    shared.loaded = true
-    shared.manager.itemEnd(shared.url)
-    return
-  }
+  await ensureTextures(shared)
 
-  // Progressive streaming fallback
-  let bytesDownloaded = 0
-  let bytesProcessed = 0
-  const chunks = []
-
-  while (true) {
-    try {
-      const { value, done } = await shared.stream.read()
-      if (done) break
-      bytesDownloaded += value.length
-      chunks.push(value)
-
-      const bytesRemains = bytesDownloaded - bytesProcessed
-      if (bytesRemains > shared.rowLength * shared.chunkSize) {
-        let vertexCount = Math.floor(bytesRemains / shared.rowLength)
-        const concatenated = new Uint8Array(bytesRemains)
-        let offset = 0
-        for (const chunk of chunks) {
-          concatenated.set(chunk, offset)
-          offset += chunk.length
-        }
-        chunks.length = 0
-
-        const buffer = new Uint8Array(vertexCount * shared.rowLength)
-        buffer.set(concatenated.subarray(0, buffer.byteLength), 0)
-        const matrices = pushDataBuffer(shared, buffer.buffer, vertexCount)
-
-        shared.worker.postMessage(
-          {
-            method: 'push',
-            src: shared.url,
-            length: shared.numVertices * 16,
-            matrices: matrices.buffer,
-          },
-          [matrices.buffer]
-        )
-        bytesProcessed += vertexCount * shared.rowLength
-      }
-    } catch (error) {
-      console.error('[RobustSplatLoader] Stream read error:', error)
-      break
-    }
-  }
-
-  if (bytesDownloaded - bytesProcessed > 0) {
-    const concatenated = new Uint8Array(chunks.reduce((acc, c) => acc + c.length, 0))
-    let offset = 0
-    for (const chunk of chunks) {
-      concatenated.set(chunk, offset)
-      offset += chunk.length
-    }
-    const numVertices = Math.floor(concatenated.byteLength / shared.rowLength)
-    if (numVertices > 0) {
-      const matrices = pushDataBuffer(shared, concatenated.buffer, numVertices)
-      shared.worker.postMessage(
-        {
-          method: 'push',
-          src: shared.url,
-          length: numVertices * 16,
-          matrices: matrices.buffer,
-        },
-        [matrices.buffer]
-      )
-    }
-  }
+  const vertexCount = Math.floor(shared.fullBuffer.byteLength / shared.rowLength)
+  const matrices = pushDataBuffer(shared, shared.fullBuffer, vertexCount)
+  shared.worker.postMessage(
+    {
+      method: 'push',
+      src: shared.url,
+      length: shared.numVertices * 16,
+      matrices: matrices.buffer,
+    },
+    [matrices.buffer]
+  )
 
   shared.loaded = true
   shared.manager.itemEnd(shared.url)
@@ -511,55 +484,63 @@ function pushDataBuffer(shared, buffer, vertexCount) {
     for (let j = 0; j < 16; j++) matrices[i * 16 + j] = mtx.elements[j]
   }
 
-  while (vertexCount > 0) {
-    let width = 0
-    let height = 0
-    const xoffset = shared.loadedVertexCount % shared.bufferTextureWidth
-    const yoffset = Math.floor(shared.loadedVertexCount / shared.bufferTextureWidth)
-    if (shared.loadedVertexCount % shared.bufferTextureWidth !== 0) {
-      width = Math.min(shared.bufferTextureWidth, xoffset + vertexCount) - xoffset
-      height = 1
-    } else if (Math.floor(vertexCount / shared.bufferTextureWidth) > 0) {
-      width = shared.bufferTextureWidth
-      height = Math.floor(vertexCount / shared.bufferTextureWidth)
-    } else {
-      width = vertexCount % shared.bufferTextureWidth
-      height = 1
+  const p1 = shared.gl.properties.get(shared.centerAndScaleTexture)
+  const p2 = shared.gl.properties.get(shared.covAndColorTexture)
+
+  if (p1?.__webglTexture && p2?.__webglTexture) {
+    while (vertexCount > 0) {
+      let width = 0
+      let height = 0
+      const xoffset = shared.loadedVertexCount % shared.bufferTextureWidth
+      const yoffset = Math.floor(shared.loadedVertexCount / shared.bufferTextureWidth)
+      if (shared.loadedVertexCount % shared.bufferTextureWidth !== 0) {
+        width = Math.min(shared.bufferTextureWidth, xoffset + vertexCount) - xoffset
+        height = 1
+      } else if (Math.floor(vertexCount / shared.bufferTextureWidth) > 0) {
+        width = shared.bufferTextureWidth
+        height = Math.floor(vertexCount / shared.bufferTextureWidth)
+      } else {
+        width = vertexCount % shared.bufferTextureWidth
+        height = 1
+      }
+
+      context.bindTexture(context.TEXTURE_2D, p1.__webglTexture)
+      context.texSubImage2D(
+        context.TEXTURE_2D,
+        0,
+        xoffset,
+        yoffset,
+        width,
+        height,
+        context.RGBA,
+        context.FLOAT,
+        shared.centerAndScaleData,
+        shared.loadedVertexCount * 4
+      )
+
+      context.bindTexture(context.TEXTURE_2D, p2.__webglTexture)
+      context.texSubImage2D(
+        context.TEXTURE_2D,
+        0,
+        xoffset,
+        yoffset,
+        width,
+        height,
+        context.RGBA_INTEGER,
+        context.UNSIGNED_INT,
+        shared.covAndColorData,
+        shared.loadedVertexCount * 4
+      )
+
+      shared.gl.resetState()
+      shared.loadedVertexCount += width * height
+      vertexCount -= width * height
     }
-
-    const p1 = shared.gl.properties.get(shared.centerAndScaleTexture)
-    context.bindTexture(context.TEXTURE_2D, p1.__webglTexture)
-    context.texSubImage2D(
-      context.TEXTURE_2D,
-      0,
-      xoffset,
-      yoffset,
-      width,
-      height,
-      context.RGBA,
-      context.FLOAT,
-      shared.centerAndScaleData,
-      shared.loadedVertexCount * 4
-    )
-
-    const p2 = shared.gl.properties.get(shared.covAndColorTexture)
-    context.bindTexture(context.TEXTURE_2D, p2.__webglTexture)
-    context.texSubImage2D(
-      context.TEXTURE_2D,
-      0,
-      xoffset,
-      yoffset,
-      width,
-      height,
-      context.RGBA_INTEGER,
-      context.UNSIGNED_INT,
-      shared.covAndColorData,
-      shared.loadedVertexCount * 4
-    )
-
-    shared.gl.resetState()
-    shared.loadedVertexCount += width * height
-    vertexCount -= width * height
+  } else {
+    // If textures are not yet bound, fallback: Three.js uploads data on frame render
+    shared.centerAndScaleTexture.needsUpdate = true
+    shared.covAndColorTexture.needsUpdate = true
+    shared.loadedVertexCount += vertexCount
   }
 
   return matrices
@@ -570,6 +551,8 @@ export default function GaussianSplat({
   src,
   alphaTest = 0.05,
   chunkSize = 25000,
+  onLoaded,
+  onProgress,
   ...props
 }) {
   extend({ SplatMaterial })
@@ -580,9 +563,20 @@ export default function GaussianSplat({
   const shared = useLoader(RobustSplatLoader, src, (loader) => {
     loader.gl = gl
     loader.chunkSize = chunkSize
+    loader.onProgress = onProgress
   })
 
-  useLayoutEffect(() => shared.connect(ref.current), [shared, src])
+  useLayoutEffect(() => {
+    const cleanup = shared.connect(ref.current)
+    return cleanup
+  }, [shared, src])
+
+  React.useEffect(() => {
+    if (shared && shared.loaded && onLoaded) {
+      onLoaded()
+    }
+  }, [shared, shared?.loaded, onLoaded])
+
   useFrame(() => shared.update(ref.current, camera))
 
   return (

@@ -375,6 +375,7 @@ class SplatErrorBoundary extends React.Component {
   }
   componentDidCatch(error) {
     console.warn('[PhotorealisticSplat] Splat loading caught by boundary:', error)
+    if (this.props.onError) this.props.onError()
   }
   render() {
     if (this.state.hasError) return null
@@ -383,14 +384,21 @@ class SplatErrorBoundary extends React.Component {
 }
 
 // ── 3D Gaussian Splat Renderer ────────────────────────────────────────────────
-function PhotorealisticSplat({ splatUrl, rotationZ = 0, rotationX = 0, invertY = false }) {
+function PhotorealisticSplat({
+  splatUrl,
+  rotationZ = 0,
+  rotationX = 0,
+  invertY = false,
+  onProgress,
+  onLoaded,
+}) {
   if (!splatUrl) return null
 
   const rx = (invertY ? Math.PI : 0) + rotationX
   const rz = rotationZ
 
   return (
-    <SplatErrorBoundary key={splatUrl}>
+    <SplatErrorBoundary key={splatUrl} onError={onLoaded}>
       <Suspense fallback={null}>
         <GaussianSplat
           key={`${splatUrl}-${invertY}-${rx.toFixed(2)}-${rz.toFixed(2)}`}
@@ -399,6 +407,8 @@ function PhotorealisticSplat({ splatUrl, rotationZ = 0, rotationX = 0, invertY =
           position={[0, 1.65, 0]}
           scale={[1, 1, 1]}
           alphaTest={0.05}
+          onProgress={onProgress}
+          onLoaded={onLoaded}
         />
       </Suspense>
     </SplatErrorBoundary>
@@ -513,6 +523,26 @@ export default function Viewer3D({ onPOIPlace }) {
   const navgridUrl = currentScene?.tour_path
     ? `${currentScene.tour_path.substring(0, currentScene.tour_path.lastIndexOf('/'))}/nav/navgrid.json`
     : '/static/navigation/navgrid.json'
+
+  const [splatLoadingProgress, setSplatLoadingProgress] = useState({
+    loading: true,
+    percent: 0,
+    loaded: 0,
+    total: 0,
+  })
+
+  // Reset loading progress whenever scene / splatUrl changes
+  useEffect(() => {
+    setSplatLoadingProgress({ loading: true, percent: 0, loaded: 0, total: 0 })
+  }, [splatUrl])
+
+  const handleSplatProgress = useCallback((p) => {
+    setSplatLoadingProgress({ loading: true, ...p })
+  }, [])
+
+  const handleSplatLoaded = useCallback(() => {
+    setSplatLoadingProgress((prev) => ({ ...prev, loading: false, percent: 100 }))
+  }, [])
 
   const handleSyncPosition = useCallback(
     (pos, yaw) => {
@@ -701,6 +731,8 @@ export default function Viewer3D({ onPOIPlace }) {
               rotationZ={rotationZ}
               rotationX={rotationX}
               invertY={invertY}
+              onProgress={handleSplatProgress}
+              onLoaded={handleSplatLoaded}
             />
           )}
 
@@ -727,6 +759,65 @@ export default function Viewer3D({ onPOIPlace }) {
           <POIPlacementHandler onPlace={handlePlace} />
         </Canvas>
       </CanvasErrorBoundary>
+
+      {/* ── High-Tech HUD Loading Indicator ── */}
+      {splatLoadingProgress.loading && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 60,
+            background: 'rgba(10, 18, 30, 0.95)',
+            padding: '24px 36px',
+            borderRadius: 12,
+            border: '1px solid #00e5ff',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 229, 255, 0.3)',
+            backdropFilter: 'blur(12px)',
+            textAlign: 'center',
+            minWidth: 320,
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ fontSize: 26, marginBottom: 8 }}>⚡</div>
+          <div
+            style={{
+              color: '#00e5ff',
+              fontWeight: 700,
+              fontSize: 15,
+              marginBottom: 6,
+              letterSpacing: '0.5px',
+            }}
+          >
+            Loading Photorealistic 3D Space
+          </div>
+          <div style={{ color: '#88a0b5', fontSize: 12, marginBottom: 14 }}>
+            {splatLoadingProgress.total > 0
+              ? `${(splatLoadingProgress.loaded / (1024 * 1024)).toFixed(1)} MB / ${(splatLoadingProgress.total / (1024 * 1024)).toFixed(1)} MB (${splatLoadingProgress.percent}%)`
+              : 'Streaming 3D Gaussian Splats...'}
+          </div>
+          <div
+            style={{
+              width: '100%',
+              height: 6,
+              background: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 3,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: `${Math.max(6, splatLoadingProgress.percent || 0)}%`,
+                height: '100%',
+                background: 'linear-gradient(90deg, #0077ff, #00e5ff)',
+                transition: 'width 0.2s ease-out',
+                borderRadius: 3,
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Radar Minimap ── */}
       <Minimap navgridUrl={navgridUrl} />
