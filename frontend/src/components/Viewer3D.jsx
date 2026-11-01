@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback, Suspense, useMemo } from 'react'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { Splat, Text, Line, Grid, OrbitControls } from '@react-three/drei'
+import { Text, Line, Grid, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
+import GaussianSplat from './GaussianSplat'
 
 import useStore from '../store/useStore'
 import usePOIs from '../hooks/usePOIs'
@@ -391,7 +392,7 @@ function PhotorealisticSplat({ splatUrl, rotationZ = 0, rotationX = 0, invertY =
   return (
     <SplatErrorBoundary key={splatUrl}>
       <Suspense fallback={null}>
-        <Splat
+        <GaussianSplat
           key={`${splatUrl}-${invertY}-${rx.toFixed(2)}-${rz.toFixed(2)}`}
           src={splatUrl}
           rotation={[rx, 0, rz]}

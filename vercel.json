@@ -22,6 +22,16 @@
       "framework": "fastapi"
     }
   },
+  "headers": [
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" },
+        { "key": "Access-Control-Expose-Headers", "value": "Content-Length, Content-Range, Accept-Ranges" }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
