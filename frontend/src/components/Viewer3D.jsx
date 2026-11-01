@@ -7,7 +7,6 @@ import useStore from '../store/useStore'
 import usePOIs from '../hooks/usePOIs'
 import Minimap from './Minimap'
 import POISearchBar from './POISearchBar'
-import ProxyMeshView from './ProxyMeshView.jsx'
 import { DEFAULT_SCENES } from '../api/scenesData.js'
 
 // ── WebGL Error Boundary ──────────────────────────────────────────────────────
@@ -399,8 +398,7 @@ export default function Viewer3D({ onPOIPlace }) {
 
   // Control mode: 'wasd' (First-person walk) vs 'orbit' (Inspect from outside)
   const [controlMode, setControlMode] = useState('wasd')
-  const [invertY, setInvertY] = useState(true) // Default upright (flips COLMAP Y-down to Three.js Y-up)
-  const [renderMode, setRenderMode] = useState('both') // 'both' | 'mesh' | 'splat'
+  const [invertY, setInvertY] = useState(false)
 
   // Orientation offsets
   const isRoomvid = currentScene?.name?.toLowerCase().includes('roomvid')
@@ -488,7 +486,6 @@ export default function Viewer3D({ onPOIPlace }) {
     [onPOIPlace]
   )
 
-  const glbUrl = currentScene?.glb_path || DEFAULT_SCENES[0]?.glb_path || '/static/models/sample_scene.glb'
   const splatUrl = currentScene?.splat_path || DEFAULT_SCENES[0]?.splat_path || '/static/models/sample_scene.splat'
   const navgridUrl = currentScene?.tour_path
     ? `${currentScene.tour_path.substring(0, currentScene.tour_path.lastIndexOf('/'))}/nav/navgrid.json`
@@ -570,71 +567,7 @@ export default function Viewer3D({ onPOIPlace }) {
           </button>
         </div>
 
-        {/* 3D Model vs Gaussian Splat Render Layer Selector */}
-        <div
-          style={{
-            display: 'flex',
-            gap: 4,
-            background: 'rgba(10, 20, 35, 0.92)',
-            padding: 4,
-            borderRadius: 8,
-            border: '1px solid #1e3a5f',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          <button
-            onClick={() => setRenderMode('both')}
-            title="Render both 3D Room Mesh and Gaussian Splats"
-            style={{
-              background: renderMode === 'both' ? '#00e5ff' : 'transparent',
-              color: renderMode === 'both' ? '#0a101d' : '#88a0b5',
-              border: 'none',
-              borderRadius: 6,
-              padding: '6px 10px',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            🌟 Both
-          </button>
-          <button
-            onClick={() => setRenderMode('mesh')}
-            title="Render 3D Reconstructed Mesh"
-            style={{
-              background: renderMode === 'mesh' ? '#00e5ff' : 'transparent',
-              color: renderMode === 'mesh' ? '#0a101d' : '#88a0b5',
-              border: 'none',
-              borderRadius: 6,
-              padding: '6px 10px',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            🏛️ 3D Mesh
-          </button>
-          <button
-            onClick={() => setRenderMode('splat')}
-            title="Render 3D Gaussian Splats"
-            style={{
-              background: renderMode === 'splat' ? '#00e5ff' : 'transparent',
-              color: renderMode === 'splat' ? '#0a101d' : '#88a0b5',
-              border: 'none',
-              borderRadius: 6,
-              padding: '6px 10px',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            ✨ Splat
-          </button>
-        </div>
+
 
         {/* POI Search Bar with Fuse.js */}
         <POISearchBar onNavigateToPOI={handleNavigateToPOI} />
@@ -733,18 +666,8 @@ export default function Viewer3D({ onPOIPlace }) {
           <directionalLight position={[0, -10, 0]} intensity={1.0} />
           <directionalLight position={[0, 15, 0]} intensity={1.0} />
 
-          {/* 1. 3D Reconstructed Room Mesh */}
-          {(renderMode === 'mesh' || renderMode === 'both') && glbUrl && (
-            <ProxyMeshView
-              url={glbUrl}
-              rotation={[rotationX + (invertY ? Math.PI : 0), 0, rotationZ]}
-              position={[0, 0, 0]}
-              scale={[1, 1, 1]}
-            />
-          )}
-
-          {/* 2. High-Fidelity 3D Gaussian Splats */}
-          {(renderMode === 'splat' || renderMode === 'both') && splatUrl && (
+          {/* 1. High-Fidelity 3D Gaussian Splats */}
+          {splatUrl && (
             <PhotorealisticSplat
               splatUrl={splatUrl}
               rotationZ={rotationZ}
