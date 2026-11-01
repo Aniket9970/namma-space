@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, Suspense, useMemo } from 'react'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { Text, Line, Grid, OrbitControls } from '@react-three/drei'
+import { Splat, Text, Line, Grid, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
-import { SplatLoader } from '../engine/SplatLoader'
 
 import useStore from '../store/useStore'
 import usePOIs from '../hooks/usePOIs'
@@ -383,67 +382,25 @@ class SplatErrorBoundary extends React.Component {
 }
 
 // ── 3D Gaussian Splat Renderer ────────────────────────────────────────────────
-function PhotorealisticSplat({
-  splatUrl,
-  rotationZ = 0,
-  rotationX = 0,
-  invertY = false,
-  splatScale = 1.15,
-  onLoaded,
-  onProgress,
-}) {
-  const [mesh, setMesh] = useState(null)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    if (!splatUrl) return
-    let active = true
-    setMesh(null)
-    setError(null)
-    if (onProgress) onProgress(10)
-
-    SplatLoader.load(splatUrl, (percent) => {
-      if (active && onProgress) onProgress(percent)
-    })
-      .then((splatData) => {
-        if (!active) return
-        const createdMesh = SplatLoader.createSplatMesh(splatData, {
-          scaleFactor: splatScale,
-          alphaCutoff: 0.005,
-          gaussianSharpness: 3.2,
-        })
-        window.__DEBUG_SPLAT_MESH__ = createdMesh
-        window.__SPLAT_COUNT__ = splatData.count
-        console.log('[PhotorealisticSplat] Splat mesh created and active! Splats count:', splatData.count)
-        setMesh(createdMesh)
-        if (onProgress) onProgress(100)
-        if (onLoaded) onLoaded(splatData)
-      })
-      .catch((err) => {
-        if (!active) return
-        console.error('[PhotorealisticSplat] Error loading splat:', err)
-        setError(err.message)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [splatUrl, onLoaded, onProgress])
-
-  // Update scale factor dynamically if user adjusts it
-  useEffect(() => {
-    if (mesh?.material?.uniforms?.uScaleFactor) {
-      mesh.material.uniforms.uScaleFactor.value = splatScale
-    }
-  }, [mesh, splatScale])
+function PhotorealisticSplat({ splatUrl, rotationZ = 0, rotationX = 0, invertY = false }) {
+  if (!splatUrl) return null
 
   const rx = (invertY ? Math.PI : 0) + rotationX
   const rz = rotationZ
 
-  if (!mesh) return null
-
   return (
-    <primitive object={mesh} rotation={[rx, 0, rz]} position={[0, 1.65, 0]} />
+    <SplatErrorBoundary key={splatUrl}>
+      <Suspense fallback={null}>
+        <Splat
+          key={`${splatUrl}-${invertY}-${rx.toFixed(2)}-${rz.toFixed(2)}`}
+          src={splatUrl}
+          rotation={[rx, 0, rz]}
+          position={[0, 1.65, 0]}
+          scale={[1, 1, 1]}
+          alphaTest={0.05}
+        />
+      </Suspense>
+    </SplatErrorBoundary>
   )
 }
 
@@ -469,11 +426,6 @@ export default function Viewer3D({ onPOIPlace }) {
   const isRoomvid = currentScene?.name?.toLowerCase().includes('roomvid')
   const [rotationZ, setRotationZ] = useState(isRoomvid ? Math.PI / 2 : 0)
   const [rotationX, setRotationX] = useState(0)
-
-  // Splat rendering metrics and density
-  const [splatStats, setSplatStats] = useState(null)
-  const [splatProgress, setSplatProgress] = useState(0)
-  const [splatScale, setSplatScale] = useState(1.15)
 
   // Sync orientation on scene switch
   useEffect(() => {
@@ -703,24 +655,6 @@ export default function Viewer3D({ onPOIPlace }) {
           >
             {invertY ? '🔄 Inverted' : '⬆️ Upright'}
           </button>
-          <button
-            onClick={() => {
-              setSplatScale((s) => (s === 1.15 ? 1.4 : s === 1.4 ? 0.9 : 1.15))
-            }}
-            title="Adjust Gaussian Splat density / coverage"
-            style={{
-              background: 'transparent',
-              color: '#38bdf8',
-              border: 'none',
-              borderRadius: 6,
-              padding: '6px 10px',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            🔍 Splat: {splatScale === 1.15 ? 'Normal (1.1x)' : splatScale === 1.4 ? 'Smooth (1.4x)' : 'Crisp (0.9x)'}
-          </button>
           {(rotationZ !== 0 || rotationX !== 0 || invertY) && (
             <button
               onClick={handleResetRotation}
@@ -740,40 +674,6 @@ export default function Viewer3D({ onPOIPlace }) {
             </button>
           )}
         </div>
-
-        {/* Live Splat Metrics Pill */}
-        {splatProgress > 0 && splatProgress < 100 && (
-          <div
-            style={{
-              background: 'rgba(10, 20, 35, 0.94)',
-              color: '#00e5ff',
-              padding: '6px 12px',
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 700,
-              border: '1px solid #00e5ff',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
-            }}
-          >
-            ⚡ Streaming Splats: {splatProgress}%
-          </div>
-        )}
-        {splatStats && splatProgress >= 100 && (
-          <div
-            style={{
-              background: 'rgba(10, 20, 35, 0.94)',
-              color: '#4ade80',
-              padding: '6px 12px',
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 700,
-              border: '1px solid rgba(74, 222, 128, 0.4)',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
-            }}
-          >
-            ✨ {(splatStats.count).toLocaleString()} Splats Rendered
-          </div>
-        )}
       </div>
 
       {/* ── 3D Canvas Viewport ── */}
@@ -800,9 +700,6 @@ export default function Viewer3D({ onPOIPlace }) {
               rotationZ={rotationZ}
               rotationX={rotationX}
               invertY={invertY}
-              splatScale={splatScale}
-              onProgress={setSplatProgress}
-              onLoaded={setSplatStats}
             />
           )}
 
