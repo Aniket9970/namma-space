@@ -37,12 +37,9 @@ app.add_middleware(
 
 # ── Static files ──────────────────────────────────────────────────────────────
 from pathlib import Path
-_root_static = Path(__file__).resolve().parent.parent / "public" / "static"
 _public_static = Path(__file__).resolve().parent.parent / "frontend" / "public" / "static"
 _local_static = Path(__file__).resolve().parent / "static"
-if _root_static.is_dir():
-    app.mount("/static", StaticFiles(directory=str(_root_static)), name="static")
-elif _public_static.is_dir():
+if _public_static.is_dir():
     app.mount("/static", StaticFiles(directory=str(_public_static)), name="static")
 elif _local_static.is_dir():
     app.mount("/static", StaticFiles(directory=str(_local_static)), name="static")

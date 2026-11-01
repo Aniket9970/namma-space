@@ -562,13 +562,19 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
     [onPOIPlace]
   )
 
+  const [quality, setQuality] = useState('fast')
+
   const splatUrl = useMemo(() => {
+    if (quality === 'fast') {
+      if (currentScene?.splat_path_fast) return currentScene.splat_path_fast
+      if (currentScene?.splat_path?.endsWith('ex4.splat')) return '/static/models/ex4_fast.splat'
+    }
     if (isMobile) {
       if (currentScene?.splat_path_mobile) return currentScene.splat_path_mobile
-      if (currentScene?.splat_path?.endsWith('ex4.splat')) return '/static/models/ex4_mobile.splat'
+      if (currentScene?.splat_path?.endsWith('ex4.splat')) return '/static/models/ex4_fast.splat'
     }
     return currentScene?.splat_path || DEFAULT_SCENES[0]?.splat_path || '/static/models/sample_scene.splat'
-  }, [currentScene, isMobile])
+  }, [currentScene, isMobile, quality])
   const navgridUrl = currentScene?.tour_path
     ? `${currentScene.tour_path.substring(0, currentScene.tour_path.lastIndexOf('/'))}/nav/navgrid.json`
     : '/static/navigation/navgrid.json'
@@ -756,6 +762,29 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
             </button>
           )}
         </div>
+
+        {/* Quality switch */}
+        <button
+          onClick={() => setQuality((q) => (q === 'fast' ? 'hd' : 'fast'))}
+          title={quality === 'fast' ? 'Click to load HD quality (8MB)' : 'Click to load Fast quality (1.5MB)'}
+          style={{
+            background: quality === 'hd' ? 'rgba(0, 229, 255, 0.2)' : 'rgba(255, 170, 0, 0.15)',
+            color: quality === 'hd' ? '#00e5ff' : '#ffaa00',
+            border: quality === 'hd' ? '1px solid #00e5ff' : '1px solid rgba(255, 170, 0, 0.4)',
+            borderRadius: 8,
+            padding: isMobile ? '4px 7px' : '6px 11px',
+            fontSize: isMobile ? 10 : 12,
+            fontWeight: 700,
+            cursor: 'pointer',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3,
+          }}
+        >
+          {quality === 'hd' ? '💎 HD' : '⚡ Fast'}
+        </button>
       </div>
 
       {/* ── 3D Canvas Viewport ── */}

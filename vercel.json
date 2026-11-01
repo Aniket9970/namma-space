@@ -41,7 +41,7 @@
       }
     },
     {
-      "source": "/((?!static/).*)",
+      "source": "/(.*)",
       "destination": {
         "service": "frontend"
       }
