@@ -239,9 +239,22 @@ class RobustSplatLoader extends THREE.Loader {
 
 async function loadShared(shared) {
   shared.manager.itemStart(shared.url)
-  const data = await fetch(shared.url)
-  if (!data.ok || data.body === null) {
-    throw new Error(`Failed to fetch splat file "${shared.url}": ${data.status}`)
+
+  let data = null
+  let lastError = null
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      data = await fetch(shared.url)
+      if (data && data.ok && data.body !== null) break
+    } catch (err) {
+      lastError = err
+      console.warn(`[RobustSplatLoader] Fetch attempt ${attempt} failed:`, err)
+      if (attempt < 3) await new Promise((r) => setTimeout(r, 1000 * attempt))
+    }
+  }
+
+  if (!data || !data.ok || data.body === null) {
+    throw new Error(`Failed to fetch splat file "${shared.url}": ${data?.status || lastError?.message || 'Network timeout'}`)
   }
 
   let totalDownloadBytes = 0
@@ -270,7 +283,7 @@ async function loadShared(shared) {
         shared.onProgress({
           loaded: bytesDownloaded,
           total: 0,
-          percent: Math.min(95, Math.round((bytesDownloaded / 8000000) * 100)),
+          percent: Math.min(95, Math.round((bytesDownloaded / 4194304) * 100)),
         })
       }
     }

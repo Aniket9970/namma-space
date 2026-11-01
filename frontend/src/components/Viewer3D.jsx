@@ -591,12 +591,13 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
       return
     }
     setSplatLoadingProgress({ loading: true, percent: 0, loaded: 0, total: 0 })
-    // Safety auto-dismiss: if splats finish rendering or network takes max 20s, dismiss loading HUD
+    // Extended timeout allowance: up to 120s on mobile (90s on desktop) to give ample time for HD rendering
+    const maxTimeout = isMobile ? 120000 : 90000
     const timer = setTimeout(() => {
       setSplatLoadingProgress((prev) => ({ ...prev, loading: false }))
-    }, 20000)
+    }, maxTimeout)
     return () => clearTimeout(timer)
-  }, [splatUrl])
+  }, [splatUrl, isMobile])
 
   const handleSplatProgress = useCallback((p) => {
     setSplatLoadingProgress((prev) => {
@@ -975,7 +976,9 @@ export default function Viewer3D({ onPOIPlace, isMobile = false }) {
                 Loading 3D Space
               </span>
               <span style={{ color: '#88a0b5', fontSize: 10, fontWeight: 600 }}>
-                {splatLoadingProgress.percent > 0 ? `${splatLoadingProgress.percent}%` : ''}
+                {splatLoadingProgress.loaded > 0
+                  ? `${(splatLoadingProgress.loaded / (1024 * 1024)).toFixed(1)} MB (${splatLoadingProgress.percent}%)`
+                  : (splatLoadingProgress.percent > 0 ? `${splatLoadingProgress.percent}%` : 'Connecting...')}
               </span>
             </div>
             <div
