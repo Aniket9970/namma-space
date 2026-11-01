@@ -5,6 +5,7 @@ import POIForm from './components/POIForm.jsx'
 import useStore from './store/useStore.js'
 import usePOIs from './hooks/usePOIs.js'
 import { getScenes, createScene } from './api/index.js'
+import { DEFAULT_SCENES } from './api/scenesData.js'
 
 export default function App() {
   const { currentScene, mode, setScene, isLoading } = useStore()
@@ -13,16 +14,20 @@ export default function App() {
   // POI placement state
   const [pendingPosition, setPendingPosition] = useState(null)
 
-  // Scene picker state
-  const [scenes, setScenes] = useState([])
+  // Scene picker state (pre-populate with default scenes so UI is instant)
+  const [scenes, setScenes] = useState(DEFAULT_SCENES)
   const [showScenePicker, setShowScenePicker] = useState(false)
   const [newSceneName, setNewSceneName] = useState('')
   const [creating, setCreating] = useState(false)
 
-  // Load scenes on mount
+  // Load live scenes on mount
   useEffect(() => {
     getScenes()
-      .then(setScenes)
+      .then((data) => {
+        if (data && data.length > 0) {
+          setScenes(data)
+        }
+      })
       .catch((e) => console.error('Failed to load scenes:', e))
   }, [])
 

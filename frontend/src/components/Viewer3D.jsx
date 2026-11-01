@@ -1,12 +1,71 @@
 import React, { useEffect, useRef, useState, useCallback, Suspense, useMemo } from 'react'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { Splat, Text, Line, Grid, OrbitControls } from '@react-three/drei'
+import { Splat, Text, Line, Grid, OrbitControls, Loader } from '@react-three/drei'
 import * as THREE from 'three'
 
 import useStore from '../store/useStore'
 import usePOIs from '../hooks/usePOIs'
 import Minimap from './Minimap'
 import POISearchBar from './POISearchBar'
+import { DEFAULT_SCENES } from '../api/scenesData.js'
+
+// ── WebGL Error Boundary ──────────────────────────────────────────────────────
+class CanvasErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('[CanvasErrorBoundary]', error, errorInfo)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            background: '#0a0e14',
+            color: '#fff',
+            padding: 24,
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+          <h3 style={{ color: '#00e5ff', marginBottom: 8 }}>3D Acceleration Needed</h3>
+          <p style={{ maxWidth: 460, color: '#94a3b8', fontSize: 13, lineHeight: 1.6 }}>
+            {this.state.error?.message?.includes('WebGL')
+              ? 'Could not create WebGL context. Please enable Hardware Acceleration in your browser settings (Chrome Settings > System > Use graphics acceleration).'
+              : `Unable to render 3D space: ${this.state.error?.message || 'Unknown error'}`}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: 16,
+              background: '#00e5ff',
+              color: '#0a101d',
+              border: 'none',
+              borderRadius: 6,
+              padding: '8px 16px',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            ↻ Reload Page
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // ── Movement & Sensitivity Constants ──────────────────────────────────────────
 const WALK_SPEED = 2.5
@@ -290,7 +349,16 @@ function PhotorealisticSplat({ splatUrl, rotationZ = 0, rotationX = 0, invertY =
   const rz = rotationZ
 
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <group position={[0, 1.2, 0]}>
+          <mesh>
+            <boxGeometry args={[1.5, 0.05, 1.5]} />
+            <meshStandardMaterial color="#00e5ff" wireframe opacity={0.4} transparent />
+          </mesh>
+        </group>
+      }
+    >
       <Splat
         key={`${splatUrl}-${invertY}-${rx.toFixed(2)}-${rz.toFixed(2)}`}
         src={splatUrl}
@@ -407,7 +475,7 @@ export default function Viewer3D({ onPOIPlace }) {
     [onPOIPlace]
   )
 
-  const splatUrl = currentScene?.splat_path || '/static/models/scene.splat'
+  const splatUrl = currentScene?.splat_path || DEFAULT_SCENES[0]?.splat_path || '/static/models/sample_scene.splat'
   const navgridUrl = currentScene?.tour_path
     ? `${currentScene.tour_path.substring(0, currentScene.tour_path.lastIndexOf('/'))}/nav/navgrid.json`
     : '/static/navigation/navgrid.json'
@@ -574,41 +642,54 @@ export default function Viewer3D({ onPOIPlace }) {
       </div>
 
       {/* ── 3D Canvas Viewport ── */}
-      <Canvas
-        camera={{ position: [0, 1.65, 3.2], fov: 75, near: 0.1, far: 200 }}
-        style={{ background: '#0a0e14' }}
-      >
-        <ambientLight intensity={0.9} />
-        <directionalLight position={[10, 20, 10]} intensity={1.2} />
+      <CanvasErrorBoundary>
+        <Canvas
+          camera={{ position: [0, 1.65, 3.2], fov: 75, near: 0.1, far: 200 }}
+          style={{ background: '#0a0e14' }}
+        >
+          <ambientLight intensity={0.9} />
+          <directionalLight position={[10, 20, 10]} intensity={1.2} />
 
-        {/* 1. High-Fidelity 3D Gaussian Splats */}
-        <PhotorealisticSplat
-          splatUrl={splatUrl}
-          rotationZ={rotationZ}
-          rotationX={rotationX}
-          invertY={invertY}
-        />
-
-        {/* 2. Controls: First-Person WASD vs Orbit */}
-        {controlMode === 'wasd' ? (
-          <SplatWASDControls enabled={true} onSyncPosition={handleSyncPosition} />
-        ) : (
-          <OrbitControls
-            target={[0, 1.2, 0]}
-            maxPolarAngle={Math.PI / 2 + 0.3}
-            minDistance={0.5}
-            maxDistance={40}
-            enableDamping
-            dampingFactor={0.08}
+          {/* 1. High-Fidelity 3D Gaussian Splats */}
+          <PhotorealisticSplat
+            splatUrl={splatUrl}
+            rotationZ={rotationZ}
+            rotationX={rotationX}
+            invertY={invertY}
           />
-        )}
 
-        {/* Interactive Floor Markers & Navigation Ribbon */}
-        <POIMarkers pois={pois} onSelect={handleNavigateToPOI} />
-        <NavigationPath path={navigationPath} />
-        <FloorGrid />
-        <POIPlacementHandler onPlace={handlePlace} />
-      </Canvas>
+          {/* 2. Controls: First-Person WASD vs Orbit */}
+          {controlMode === 'wasd' ? (
+            <SplatWASDControls enabled={true} onSyncPosition={handleSyncPosition} />
+          ) : (
+            <OrbitControls
+              target={[0, 1.2, 0]}
+              maxPolarAngle={Math.PI / 2 + 0.3}
+              minDistance={0.5}
+              maxDistance={40}
+              enableDamping
+              dampingFactor={0.08}
+            />
+          )}
+
+          {/* Interactive Floor Markers & Navigation Ribbon */}
+          <Suspense fallback={null}>
+            <POIMarkers pois={pois} onSelect={handleNavigateToPOI} />
+          </Suspense>
+          <NavigationPath path={navigationPath} />
+          <FloorGrid />
+          <POIPlacementHandler onPlace={handlePlace} />
+        </Canvas>
+      </CanvasErrorBoundary>
+
+      {/* ── Visual Loading Bar for 3D Assets ── */}
+      <Loader
+        dataInterpolation={(p) => `Loading 3D Space: ${p.toFixed(0)}%`}
+        containerStyles={{ background: 'rgba(10, 14, 20, 0.94)', zIndex: 100 }}
+        innerStyles={{ width: 220, height: 4, background: '#1e293b' }}
+        barStyles={{ background: '#00e5ff' }}
+        dataStyles={{ color: '#00e5ff', fontSize: 13, fontWeight: 700, marginTop: 10 }}
+      />
 
       {/* ── Radar Minimap ── */}
       <Minimap navgridUrl={navgridUrl} />
