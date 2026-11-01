@@ -134,11 +134,25 @@ export default function Sidebar() {
               outline: 'none',
             }}
           >
-            {scenes.map((s) => (
-              <option key={s.id} value={s.id}>
-                🏛️ {s.name}
-              </option>
-            ))}
+            {scenes.map((s) => {
+              const splatName = s.splat_path?.split('/')?.pop() || ''
+              let label = s.name
+              if (splatName.includes('ex4')) label += ' (Ultra HD • 856k splats)'
+              else if (splatName.includes('ex3')) label += ' (Ultra HD • 1.0M splats)'
+              else if (splatName.includes('ex2')) label += ' (Ultra HD • 972k splats)'
+              else if (splatName.includes('ex1')) label += ' (Ultra HD • 1.1M splats)'
+              else if (splatName.includes('roomvid')) label += ' (Ultra HD • 1.0M splats)'
+              else if (splatName.includes('60fps')) label += ' (Ultra HD • 826k splats)'
+              else if (splatName.includes('apt_video')) label += ' (HD • 228k splats)'
+              else if (splatName.includes('indoor_tour')) label += ' (HD • 449k splats)'
+              else if (splatName.includes('tour_video')) label += ' (HD • 494k splats)'
+              else if (splatName.includes('sample_scene')) label += ' (Fast Preview • 60k splats)'
+              return (
+                <option key={s.id} value={s.id}>
+                  🏛️ {label}
+                </option>
+              )
+            })}
           </select>
         </div>
       )}

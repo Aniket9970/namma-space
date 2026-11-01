@@ -1,56 +1,6 @@
 // scenesData.js — Fallback scene and POI data for standalone / Vercel deployment
 export const DEFAULT_SCENES = [
   {
-    "id": 5,
-    "name": "Sample Scene Scene",
-    "glb_path": "/static/models/sample_scene.glb",
-    "splat_path": "/static/models/sample_scene.splat",
-    "grid_path": "/static/navigation/sample_scene_grid.npy",
-    "grid_meta_json": null,
-    "tour_path": "/static/panoramas/sample_scene/tour.json",
-    "created_at": "2026-10-30T19:26:15.670021+00:00"
-  },
-  {
-    "id": 4,
-    "name": "Roomvid Scene",
-    "glb_path": "/static/models/roomvid.glb",
-    "splat_path": "/static/models/roomvid.splat",
-    "grid_path": "/static/navigation/roomvid_grid.npy",
-    "grid_meta_json": "{\n  \"origin\": [\n    -6.657234191894531,\n    -10.359014511108398\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 208,\n  \"cols\": 134,\n  \"floor_y\": 0.0\n}",
-    "tour_path": "/static/panoramas/roomvid/tour.json",
-    "created_at": "2026-10-30T17:42:34.792420+00:00"
-  },
-  {
-    "id": 2,
-    "name": "Apt Video Scene",
-    "glb_path": "/static/models/apt_video.glb",
-    "splat_path": "/static/models/apt_video.splat",
-    "grid_path": "/static/navigation/apt_video_grid.npy",
-    "grid_meta_json": "{\n  \"origin\": [\n    -12.789498329162598,\n    -10.257213592529297\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 206,\n  \"cols\": 256,\n  \"floor_y\": 0.0\n}",
-    "tour_path": "/static/panoramas/apt_video/tour.json",
-    "created_at": "2026-10-30T09:40:05.885556+00:00"
-  },
-  {
-    "id": 3,
-    "name": "60Fps Scene",
-    "glb_path": "/static/models/60fps.glb",
-    "splat_path": "/static/models/60fps.splat",
-    "grid_path": "/static/navigation/60fps_grid.npy",
-    "grid_meta_json": "{\n  \"origin\": [\n    -20.389633178710938,\n    -33.2848014831543\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 666,\n  \"cols\": 408,\n  \"floor_y\": 0.0\n}",
-    "tour_path": "/static/panoramas/60fps/tour.json",
-    "created_at": "2026-10-30T12:33:06.413132+00:00"
-  },
-  {
-    "id": 1,
-    "name": "Indoor Tour Scene",
-    "glb_path": "/static/models/scene.glb",
-    "splat_path": "/static/models/indoor_tour.splat",
-    "grid_path": "/static/navigation/grid.npy",
-    "grid_meta_json": "{\n  \"origin\": [\n    -3.9263551235198975,\n    -3.549999952316284\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 71,\n  \"cols\": 79,\n  \"floor_y\": 0.0\n}",
-    "tour_path": "/static/panoramas/indoor_tour/tour.json",
-    "created_at": "2026-10-26T19:54:55.947363+00:00"
-  },
-  {
     "id": 10,
     "name": "Ex4 Scene",
     "glb_path": "/static/models/ex4.glb",
@@ -99,6 +49,56 @@ export const DEFAULT_SCENES = [
     "grid_meta_json": "{\n  \"origin\": [\n    -12.74068546295166,\n    -12.340456008911133\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 247,\n  \"cols\": 255,\n  \"floor_y\": 0.0\n}",
     "tour_path": "/static/panoramas/ex1/tour.json",
     "created_at": "2026-10-31T18:29:21.590877+00:00"
+  },
+  {
+    "id": 4,
+    "name": "Roomvid Scene",
+    "glb_path": "/static/models/roomvid.glb",
+    "splat_path": "/static/models/roomvid.splat",
+    "grid_path": "/static/navigation/roomvid_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -6.657234191894531,\n    -10.359014511108398\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 208,\n  \"cols\": 134,\n  \"floor_y\": 0.0\n}",
+    "tour_path": "/static/panoramas/roomvid/tour.json",
+    "created_at": "2026-10-30T17:42:34.792420+00:00"
+  },
+  {
+    "id": 3,
+    "name": "60Fps Scene",
+    "glb_path": "/static/models/60fps.glb",
+    "splat_path": "/static/models/60fps.splat",
+    "grid_path": "/static/navigation/60fps_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -20.389633178710938,\n    -33.2848014831543\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 666,\n  \"cols\": 408,\n  \"floor_y\": 0.0\n}",
+    "tour_path": "/static/panoramas/60fps/tour.json",
+    "created_at": "2026-10-30T12:33:06.413132+00:00"
+  },
+  {
+    "id": 2,
+    "name": "Apt Video Scene",
+    "glb_path": "/static/models/apt_video.glb",
+    "splat_path": "/static/models/apt_video.splat",
+    "grid_path": "/static/navigation/apt_video_grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -12.789498329162598,\n    -10.257213592529297\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 206,\n  \"cols\": 256,\n  \"floor_y\": 0.0\n}",
+    "tour_path": "/static/panoramas/apt_video/tour.json",
+    "created_at": "2026-10-30T09:40:05.885556+00:00"
+  },
+  {
+    "id": 5,
+    "name": "Sample Scene Scene",
+    "glb_path": "/static/models/sample_scene.glb",
+    "splat_path": "/static/models/sample_scene.splat",
+    "grid_path": "/static/navigation/sample_scene_grid.npy",
+    "grid_meta_json": null,
+    "tour_path": "/static/panoramas/sample_scene/tour.json",
+    "created_at": "2026-10-30T19:26:15.670021+00:00"
+  },
+  {
+    "id": 1,
+    "name": "Indoor Tour Scene",
+    "glb_path": "/static/models/scene.glb",
+    "splat_path": "/static/models/indoor_tour.splat",
+    "grid_path": "/static/navigation/grid.npy",
+    "grid_meta_json": "{\n  \"origin\": [\n    -3.9263551235198975,\n    -3.549999952316284\n  ],\n  \"cell_size\": 0.1,\n  \"rows\": 71,\n  \"cols\": 79,\n  \"floor_y\": 0.0\n}",
+    "tour_path": "/static/panoramas/indoor_tour/tour.json",
+    "created_at": "2026-10-26T19:54:55.947363+00:00"
   }
 ];
 

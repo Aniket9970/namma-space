@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { DEFAULT_SCENES } from '../api/scenesData.js'
 
-// Default to fastest loading scene (Sample Scene, 1.8MB) or first scene
-const initialScene = DEFAULT_SCENES.find((s) => s.splat_path?.includes('sample_scene')) || DEFAULT_SCENES[0]
+// Default to full-resolution Ultra-HD scene (Ex4 Scene with 856k splats, as on localhost)
+const initialScene = DEFAULT_SCENES.find((s) => s.name?.includes('Ex4')) || DEFAULT_SCENES[0]
 
 const useStore = create((set, get) => ({
   // ── Scene & Tour State ───────────────────────────────────────────────────────

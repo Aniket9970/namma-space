@@ -657,6 +657,8 @@ export default function Viewer3D({ onPOIPlace }) {
       {/* ── 3D Canvas Viewport ── */}
       <CanvasErrorBoundary>
         <Canvas
+          dpr={[1, 2]}
+          gl={{ antialias: true, powerPreference: 'high-performance' }}
           camera={{ position: [0, 1.65, 3.2], fov: 75, near: 0.1, far: 200 }}
           style={{ background: '#0a0e14' }}
         >
