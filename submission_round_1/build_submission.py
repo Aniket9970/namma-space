@@ -769,7 +769,7 @@ def generate_setup_guide():
 
 <h2>2. One-Time Environment Setup</h2>
 <pre><code># 1. Clone repository
-git clone https://github.com/namma-space/namma_space.git
+git clone https://github.com/Aniket9970/namma-space.git
 cd namma_space/namma_space
 
 # 2. Setup Python environment
