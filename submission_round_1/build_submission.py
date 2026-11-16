@@ -210,13 +210,13 @@ def generate_technical_abstract():
 <div class="two-column">
 
   <h2>1. Introduction & Problem Scope</h2>
-  <p>Accurate digital recreation of residential and commercial indoor spaces is vital for virtual tourism, real estate, architectural inspection, and autonomous indoor robotics. However, existing solutions exhibit severe practical bottlenecks:</p>
+  <p>Accurate digital recreation of residential and commercial indoor spaces is vital for virtual tourism, real estate, architectural inspection, and autonomous indoor robotics. Recent architectural walkthrough investigations (e.g., Saly, 2024; Coburn et al., 2022) evaluate three primary reconstruction paradigms:</p>
   <ul>
-    <li><strong>Hardware Barrier:</strong> Commercial scanners (e.g., Matterport Pro3) require multi-thousand-dollar LiDAR units inaccessible to general consumers.</li>
-    <li><strong>Rendering Latency:</strong> Classic Neural Radiance Fields (NeRFs) require dense volumetric raymarching, limiting client inference to low framerates (&lt;10 FPS) without dedicated cloud rendering.</li>
-    <li><strong>Geometry Artifacts:</strong> Traditional multi-view stereo (MVS) produces noisy polygonal meshes on low-texture drywall, glossy tabletops, and transparent glass.</li>
+    <li><strong>Photogrammetry (e.g. Agisoft Metashape):</strong> Yields metric meshes and scale bars, but requires expensive proprietary licenses, lengthy depth-map meshing, and degrades on specular surfaces or plain walls.</li>
+    <li><strong>Neural Radiance Fields (e.g. Nerfstudio):</strong> Excels at view synthesis via volumetric raymarching, but suffers from high training latency and remains too computationally heavy for client-side web roaming (&lt;10 FPS).</li>
+    <li><strong>3D Gaussian Splatting (3DGS):</strong> Achieves real-time 60+ FPS view synthesis, yet traditionally lacks metric floor alignment, collision meshes, and has relied on native desktop executables (e.g. Unity plugins).</li>
   </ul>
-  <p><em>Namma Space</em> bridges this divide by providing an automated monocular capture-to-web pipeline. By pairing 3D Gaussian Splatting with a formalized capture protocol and an automated floor-alignment navigation layer, users can capture any indoor room on a standard smartphone and immediately explore it inside a lightweight browser environment.</p>
+  <p><em>Namma Space</em> unifies the best attributes of these methods into an open, automated monocular pipeline. By pairing 3DGS photorealism with automated RANSAC metric floor leveling, obstacle collision grids, and zero-install WebGL free-roaming, users can turn standard smartphone video into an interactive web walkthrough with architectural boundary and isovist intelligence.</p>
 
   <h2>2. Standard Operating Procedure (SOP)</h2>
   <p>Reconstruction fidelity in multi-view vision is strictly bounded by the geometric baseline and photometric consistency of input imagery. We formalize a rigorous, field-tested 4-step capture SOP:</p>
@@ -237,10 +237,8 @@ def generate_technical_abstract():
     <li><strong>Loop Closure:</strong> The trajectory strictly terminates at the starting physical waypoint, establishing closed loop-closure constraints in bundle adjustment.</li>
   </ul>
 
-  <h3>2.3 Blur Rejection Filter</h3>
-  <p>To eliminate walking-induced motion blur, keyframe extraction executes Laplacian variance filtering:</p>
-  <div class="math-block">$\text{Var}(\Delta I) = \frac{1}{N} \sum_{x,y} \left( \nabla^2 I(x,y) - \bar{\nabla}^2 I \right)^2 \ge \tau_{\text{blur}}$</div>
-  <p>Frames exhibiting $\text{Var}(\Delta I) &lt; 15.0$ are dynamically discarded, guaranteeing pristine sharp feature descriptors.</p>
+  <h3>2.3 Triple Keyframe Quality Filter</h3>
+  <p>To eliminate reconstruction corruption from unsteady handheld capture, keyframes undergo three cascaded filters: (1) <strong>Laplacian Variance Blur Filter:</strong> $\text{Var}(\Delta I) \ge \tau_{\text{blur}}$ discards motion-blurred frames; (2) <strong>Luminance Texture Filter:</strong> $\sigma_{\text{gray}} \ge 12.0$ skips featureless blank drywall; and (3) <strong>Inter-Frame Velocity Filter:</strong> $\Delta_{\text{motion}} \le 65.0$ rejects rapid camera whip-pans.</p>
 
   <h2>3. System Architecture & Pipeline</h2>
   <p class="no-indent">The Namma Space automated pipeline executes across 7 decoupled, fault-tolerant stages:</p>
@@ -313,13 +311,12 @@ def generate_technical_abstract():
     <li><strong>Safety Multi-Checkpoints:</strong> Models are automatically checkpointed at 7k, 10k, and 15k steps.</li>
   </ul>
 
-  <h2>5. Navigation & Occupancy Mapping</h2>
-  <p>To enable realistic physical roaming without passing through walls, a 2D floor-aligned occupancy grid is generated at a fine $5\text{ cm}$ cell resolution:</p>
+  <h2>5. Navigation & Architectural Spatial Mapping</h2>
+  <p>To bridge the gap between photoreal rendering and architectural spatial intelligence, Namma Space computes a dual occupancy and isovist layer:</p>
   <ol>
-    <li><strong>Obstacle Slicing:</strong> Splat centroids within the height slice $Y \in [0.20\text{ m}, 1.80\text{ m}]$ (above baseboards and below ceiling fixtures) are projected onto the horizontal $(X, Z)$ ground plane.</li>
-    <li><strong>Morphological Filtering:</strong> Morphological opening ($3\times 3$ kernel) eliminates isolated point noise.</li>
-    <li><strong>Agent Radius Inflation:</strong> Walls and obstacles are dilated by an agent radius $r_{\text{agent}} = 0.30\text{ m}$ to prevent camera clipping during first-person roaming.</li>
-    <li><strong>A* Pathfinding:</strong> Waypoint graphs and shortest walkable paths are computed on demand.</li>
+    <li><strong>Obstacle Slicing:</strong> Splat centroids within height slice $Y \in [0.20\text{ m}, 1.80\text{ m}]$ are projected onto the horizontal $(X, Z)$ ground plane at $5\text{ cm}$ resolution.</li>
+    <li><strong>Agent Radius Inflation:</strong> Walls are dilated by $r_{\text{agent}} = 0.30\text{ m}$ to guarantee collision-free physical roaming.</li>
+    <li><strong>Boundary & Isovist Extraction:</strong> Vectorized wall contours are extracted alongside 360° radial isovists, computing visual openness ($4\pi A / P^2$), visible area ($m^2$), and visual connectivity from walkthrough vantage points.</li>
   </ol>
 
   <h2>6. Web Viewer & Free-Roaming Engine</h2>

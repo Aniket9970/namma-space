@@ -576,6 +576,22 @@ def step_occupancy_grid(scene_name="Indoor Tour Scene", slug: str = "scene"):
     except Exception as e:
         print(f"[WARN] Photosphere tour generation skipped: {e}")
 
+    # Architectural Boundary Extraction & Isovist Analysis (Saly et al. architectural spatial metrics)
+    try:
+        base_grid = BACKEND_STATIC / "navigation" / "grid.npy"
+        if base_grid.exists():
+            spatial_out = BACKEND_STATIC / "navigation" / f"{slug}_spatial.json"
+            run(
+                [sys.executable, "spatial_analysis.py", "--grid", str(base_grid), "--out", str(spatial_out)],
+                "Step 7c/7 - Computing Architectural Spatial Intelligence & Isovist Analysis",
+                check=False
+            )
+            frontend_nav = WORKSPACE_ROOT / "namma_space" / "frontend" / "public" / "static" / "navigation"
+            if spatial_out.exists() and frontend_nav.exists():
+                shutil.copy2(str(spatial_out), str(frontend_nav / f"{slug}_spatial.json"))
+    except Exception as e:
+        print(f"[WARN] Architectural spatial analysis skipped: {e}")
+
     # Register scene in backend SQLite DB if not already registered
     db_path = BACKEND_DIR / "namma_space.db"
     meta_path = BACKEND_STATIC / "navigation" / "occupancy_meta.json"
